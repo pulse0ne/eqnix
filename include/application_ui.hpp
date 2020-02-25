@@ -4,11 +4,8 @@
 #include <gtkmm/applicationwindow.h>
 #include <gtkmm/builder.h>
 #include <map>
-#include <tuple>
 #include "application.hpp"
 #include "fr_plot.hpp"
-
-using tuplemap = std::map<std::string, std::tuple<double, double, double>>;
 
 class ApplicationUI : public Gtk::ApplicationWindow {
 public:
@@ -20,7 +17,7 @@ public:
 private:
     Application* app;
 
-    tuplemap colors;
+    std::map<std::string, Gdk::RGBA> colors;
 
     FrequencyResponsePlot* fr_plot;
 

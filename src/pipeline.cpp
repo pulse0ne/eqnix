@@ -38,7 +38,6 @@ Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
     equalizer = std::make_unique<Equalizer>();
 
     source = ensure_factory_create("pulsesrc", "source");
-    // capsfilter = ensure_factory_create("capsfilter", nullptr);
     converter = ensure_factory_create("audioconvert", "conv");
     sink = ensure_factory_create("pulsesink", "sink");
 
@@ -55,8 +54,6 @@ Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
     g_object_set(sink, "mute", 0, nullptr);
     g_object_set(sink, "provide-clock", 1, nullptr);
 
-    gst_element_set_state(pipeline, GST_STATE_PLAYING);
-
     std::string pulse_props = "application.id=com.github.pulse0ne.eqnix.sinkinputs";
     set_pulseaudio_props(pulse_props);
     set_source_monitor_name(pam->apps_sink_info->monitor_source_name);
@@ -71,19 +68,8 @@ Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
         }
     } else {
         bool use_default_sink = true; // g_settings_get_boolean(settings, "use-default-sink") != 0;
-
         if (use_default_sink) {
             set_output_sink_name(pam->server_info.default_sink_name);
-        } else {
-            //   gchar* custom_sink = g_settings_get_string(settings, "custom-sink");
-
-            //   if (pm->get_sink_info(custom_sink)) {
-            //     set_output_sink_name(custom_sink);
-            //   } else {
-            // set_output_sink_name(pm->server_info.default_sink_name);
-            //   }
-
-            //   g_free(custom_sink);
         }
     }
 
@@ -110,59 +96,41 @@ GstElement* Pipeline::ensure_factory_create(std::string factory, std::string nam
 
 void Pipeline::set_source_monitor_name(const std::string& name) {
     gchar* current_device;
-
     g_object_get(source, "current-device", &current_device, nullptr);
-
     if (name != current_device) {
         if (playing) {
             set_null_pipeline();
-
             g_object_set(source, "device", name.c_str(), nullptr);
-
             gst_element_set_state(pipeline, GST_STATE_PLAYING);
         } else {
             g_object_set(source, "device", name.c_str(), nullptr);
         }
-
         logger.debug("using input device: " + name);
     }
-
     g_free(current_device);
 }
 
 void Pipeline::set_output_sink_name(const std::string& name) {
     g_object_set(sink, "device", name.c_str(), nullptr);
-
     logger.debug("using output device: " + name);
 }
 
 void Pipeline::set_pulseaudio_props(const std::string& props) {
     auto str = "props," + props;
-
     auto s = gst_structure_from_string(str.c_str(), nullptr);
-
     g_object_set(source, "stream-properties", s, nullptr);
     g_object_set(sink, "stream-properties", s, nullptr);
-
     gst_structure_free(s);
 }
 
 void Pipeline::set_null_pipeline() {
     gst_element_set_state(pipeline, GST_STATE_NULL);
-
     GstState state;
     GstState pending;
-
     gst_element_get_state(pipeline, &state, &pending, state_check_timeout);
-
-    /*on_message_state is not called when going to null. I don't know why.
-     * so we have to update the variable manually after setting to null.
-     */
-
     if (state == GST_STATE_NULL) {
         playing = false;
     }
-
     logger.debug(gst_element_state_get_name(state) + std::string(" -> ") + gst_element_state_get_name(pending));
 }
 
@@ -179,15 +147,11 @@ auto Pipeline::apps_want_to_play() -> bool {
 
 void Pipeline::update_pipeline_state() {
     bool wants_to_play = apps_want_to_play();
-
     GstState state;
     GstState pending;
-
     gst_element_get_state(pipeline, &state, &pending, state_check_timeout);
-
     if (state != GST_STATE_PLAYING && wants_to_play) {
         // timeout_connection.disconnect();
-
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
     } else if (state == GST_STATE_PLAYING && !wants_to_play) {
         // timeout_connection.disconnect();
@@ -211,37 +175,13 @@ void Pipeline::update_pipeline_state() {
     }
 }
 
-// void Pipeline::get_latency() {
-//   GstQuery* q = gst_query_new_latency();
-
-//   if (gst_element_query(pipeline, q) != 0) {
-//     gboolean live;
-//     GstClockTime min;
-//     GstClockTime max;
-
-//     gst_query_parse_latency(q, &live, &min, &max);
-
-//     int latency = GST_TIME_AS_MSECONDS(min);
-
-//     util::debug(log_tag + "total latency: " + std::to_string(latency) + " ms");
-
-//     Glib::signal_idle().connect_once([=] { new_latency.emit(latency); });
-//   }
-
-//   gst_query_unref(q);
-// }
-
 void Pipeline::set_caps(const uint& sampling_rate) {
     logger.debug(std::to_string(current_rate));
     current_rate = sampling_rate;
     logger.debug(std::to_string(current_rate));
-
     auto caps_str = "audio/x-raw,format=F32LE,channels=2,rate=" + std::to_string(sampling_rate);
-
     auto caps = gst_caps_from_string(caps_str.c_str());
-
     g_object_set(capsfilter, "caps", caps, nullptr);
-
     gst_caps_unref(caps);
 }
 
@@ -255,15 +195,13 @@ void Pipeline::on_app_added(const std::shared_ptr<AppInfo>& app_info) {
     update_pipeline_state();
 
     auto enable_all = true; // g_settings_get_boolean(settings, "enable-all-sinkinputs");
-
     if ((enable_all != 0) && !app_info->connected) {
         pam->move_sink_input_to_eqnix(app_info->name, app_info->index);
     }
 }
 
 void Pipeline::on_app_changed(const std::shared_ptr<AppInfo>& app_info) {
-    std::replace_copy_if(
-        apps_list.begin(), apps_list.end(), apps_list.begin(), [=](auto& a) { return a->index == app_info->index; }, app_info);
+    std::replace_copy_if(apps_list.begin(), apps_list.end(), apps_list.begin(), [=](auto& a) { return a->index == app_info->index; }, app_info);
     update_pipeline_state();
 }
 

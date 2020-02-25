@@ -3,14 +3,13 @@
 
 #include <gtkmm.h>
 #include <cairomm/cairomm.h>
-#include <tuple>
 #include <map>
 
-using tuplemap = std::map<std::string, std::tuple<double, double, double>>;
+using Colormap = std::map<std::string, Gdk::RGBA>;
 
 class FrequencyResponsePlot : public Gtk::DrawingArea {
 public:
-    FrequencyResponsePlot(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& builder, tuplemap _colors);
+    FrequencyResponsePlot(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& builder, Colormap colormap);
     ~FrequencyResponsePlot();
 
 private:
@@ -24,7 +23,7 @@ private:
         {"10k", 10000.0}
     };
 
-    tuplemap colors;
+    Colormap colors;
     double nyquist;
     double start_freq;
 };

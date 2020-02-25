@@ -3,7 +3,7 @@
 #include <iomanip>
 #include "util.hpp"
 
-FrequencyResponsePlot::FrequencyResponsePlot(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& builder, tuplemap _colors)
+FrequencyResponsePlot::FrequencyResponsePlot(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& builder, Colormap _colors)
     : Gtk::DrawingArea(cobject), colors(_colors), nyquist(22050.0), start_freq(10.0) {
     add_events(Gdk::BUTTON_PRESS_MASK);
 }
@@ -30,14 +30,14 @@ bool FrequencyResponsePlot::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
 
 void FrequencyResponsePlot::draw_grid(int w, int h, const Cairo::RefPtr<Cairo::Context>& cr) {
     auto line_range = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    double r, g, b;
-    std::tie(r, g, b) = colors["background"];
-    cr->set_source_rgb(r, g, b);
+    Gdk::RGBA c, b;
+    c = colors["background"];
+    cr->set_source_rgb(c.get_red(), c.get_green(), c.get_blue());
     cr->rectangle(0, 0, w, h);
     cr->fill();
 
-    std::tie(r, g, b) = colors["grid-lines"];
-    auto& [rb, gb, bb] = colors["grid-lines-bright"];
+    c = colors["grid-lines"];
+    b = colors["grid-lines-bright"];
     cr->set_line_width(1.0);
 
     auto m = w / log10(nyquist / start_freq);
@@ -47,9 +47,9 @@ void FrequencyResponsePlot::draw_grid(int w, int h, const Cairo::RefPtr<Cairo::C
             if (i == 1 && p == 1) continue;
             auto x = floor(m * log10(p * j / start_freq)) + 0.5;
             if (p == 1) {
-                cr->set_source_rgb(rb, gb, bb);
+                cr->set_source_rgb(b.get_red(), b.get_green(), b.get_blue());
             } else {
-                cr->set_source_rgb(r, g, b);
+                cr->set_source_rgb(c.get_red(), c.get_green(), c.get_blue());
             }
             cr->move_to(x, 0);
             cr->line_to(x, h);
@@ -72,9 +72,9 @@ void FrequencyResponsePlot::draw_grid(int w, int h, const Cairo::RefPtr<Cairo::C
         std::ostringstream s;
         s << std::fixed << std::setprecision(0) << db;
         if (db == 0.0) {
-            cr->set_source_rgb(rb, gb, bb);
+            cr->set_source_rgb(b.get_red(), b.get_green(), b.get_blue());
         } else {
-            cr->set_source_rgb(r, g, b);
+            cr->set_source_rgb(c.get_red(), c.get_green(), c.get_blue());
         }
         cr->move_to(0, y);
         cr->line_to(w, y);

@@ -89,34 +89,33 @@ public:
 
     ServerInfo server_info;
     std::shared_ptr<SinkInfo> apps_sink_info;
-    // std::shared_ptr<SinkInfo> mic_sink_info;
 
-    std::vector<std::string> blacklist_in;
+    // std::vector<std::string> blacklist_in;
     std::vector<std::string> blacklist_out;
 
     auto get_sink_info(const std::string& name) -> std::shared_ptr<SinkInfo>;
     auto get_source_info(const std::string& name) -> std::shared_ptr<SourceInfo>;
 
     void find_sink_inputs();
-    void find_source_outputs();
+    // void find_source_outputs();
     void find_sinks();
-    void find_sources();
+    // void find_sources();
     void move_sink_input_to_eqnix(const std::string& name, uint idx);
     void remove_sink_input_from_eqnix(const std::string& name, uint idx);
-    void move_source_output_to_eqnix(const std::string& name, uint idx);
-    void remove_source_output_from_eqnix(const std::string& name, uint idx);
+    // void move_source_output_to_eqnix(const std::string& name, uint idx);
+    // void remove_source_output_from_eqnix(const std::string& name, uint idx);
     void set_sink_input_volume(const std::string& name, uint idx, uint8_t channels, uint value);
     void set_sink_input_mute(const std::string& name, uint idx, bool state);
-    void set_source_output_volume(const std::string& name, uint idx, uint8_t channels, uint value);
-    void set_source_output_mute(const std::string& name, uint idx, bool state);
+    // void set_source_output_volume(const std::string& name, uint idx, uint8_t channels, uint value);
+    // void set_source_output_mute(const std::string& name, uint idx, bool state);
     void get_sink_input_info(uint idx);
     void update_server_info(const pa_server_info* info);
     void get_modules_info();
     void get_clients_info();
 
-    sigc::signal<void, std::shared_ptr<SourceInfo>> source_added;
-    sigc::signal<void, std::shared_ptr<SourceInfo>> source_changed;
-    sigc::signal<void, uint> source_removed;
+    // sigc::signal<void, std::shared_ptr<SourceInfo>> source_added;
+    // sigc::signal<void, std::shared_ptr<SourceInfo>> source_changed;
+    // sigc::signal<void, uint> source_removed;
     sigc::signal<void, std::shared_ptr<SinkInfo>> sink_added;
     sigc::signal<void, std::shared_ptr<SinkInfo>> sink_changed;
     sigc::signal<void, uint> sink_removed;
@@ -125,9 +124,9 @@ public:
     sigc::signal<void, std::shared_ptr<AppInfo>> sink_input_added;
     sigc::signal<void, std::shared_ptr<AppInfo>> sink_input_changed;
     sigc::signal<void, uint> sink_input_removed;
-    sigc::signal<void, std::shared_ptr<AppInfo>> source_output_added;
-    sigc::signal<void, std::shared_ptr<AppInfo>> source_output_changed;
-    sigc::signal<void, uint> source_output_removed;
+    // sigc::signal<void, std::shared_ptr<AppInfo>> source_output_added;
+    // sigc::signal<void, std::shared_ptr<AppInfo>> source_output_changed;
+    // sigc::signal<void, uint> source_output_removed;
     sigc::signal<void> server_changed;
     sigc::signal<void, std::shared_ptr<ModuleInfo>> module_info;
     sigc::signal<void, std::shared_ptr<ClientInfo>> client_info;
@@ -150,20 +149,19 @@ private:
     auto get_default_source_info() -> std::shared_ptr<SourceInfo>;
     auto load_sink(const std::string& name, const std::string& description, uint rate) -> std::shared_ptr<SinkInfo>;
     void load_apps_sink();
-    // void load_mic_sink();
     auto load_module(const std::string& name, const std::string& argument) -> bool;
     void unload_module(uint idx);
     void unload_sinks();
     void drain_context();
     void new_app(const pa_sink_input_info* info);
-    void new_app(const pa_source_output_info* info);
+    // void new_app(const pa_source_output_info* info);
     void changed_app(const pa_sink_input_info* info);
-    void changed_app(const pa_source_output_info* info);
+    // void changed_app(const pa_source_output_info* info);
     static void print_app_info(const std::shared_ptr<AppInfo>& info);
     auto app_is_connected(const pa_sink_input_info* info) -> bool;
-    auto app_is_connected(const pa_source_output_info* info) -> bool;
+    // auto app_is_connected(const pa_source_output_info* info) -> bool;
     static auto get_latency(const pa_sink_input_info* info) -> uint { return info->sink_usec; }
-    static auto get_latency(const pa_source_output_info* info) -> uint { return info->source_usec; }
+    // static auto get_latency(const pa_source_output_info* info) -> uint { return info->source_usec; }
 
     template <typename T>
     auto parse_app_info(const T& info) -> std::shared_ptr<AppInfo> {

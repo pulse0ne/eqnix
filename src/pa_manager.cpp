@@ -88,77 +88,6 @@ void PAManager::subscribe_to_events() {
             } else if (e == PA_SUBSCRIPTION_EVENT_REMOVE) {
                 Glib::signal_idle().connect_once([pm, idx]() { pm->sink_input_removed.emit(idx); });
             }
-        } else if (f == PA_SUBSCRIPTION_EVENT_SOURCE_OUTPUT) {
-            auto e = t & PA_SUBSCRIPTION_EVENT_TYPE_MASK;
-
-            if (e == PA_SUBSCRIPTION_EVENT_NEW) {
-                pa_context_get_source_output_info(c, idx, [](auto cx, auto info, auto eol, auto d) {
-                    if (info != nullptr) {
-                        auto pm = static_cast<PAManager*>(d);
-                        pm->new_app(info);
-                    }
-                }, pm);
-            } else if (e == PA_SUBSCRIPTION_EVENT_CHANGE) {
-                pa_context_get_source_output_info(c, idx, [](auto cx, auto info, auto eol, auto d) {
-                    if (info != nullptr) {
-                        auto pm = static_cast<PAManager*>(d);
-                        pm->changed_app(info);
-                    }
-                }, pm);
-            } else if (e == PA_SUBSCRIPTION_EVENT_REMOVE) {
-                Glib::signal_idle().connect_once([pm, idx]() { pm->source_output_removed.emit(idx); });
-            }
-        } else if (f == PA_SUBSCRIPTION_EVENT_SOURCE) {
-            auto e = t & PA_SUBSCRIPTION_EVENT_TYPE_MASK;
-
-            if (e == PA_SUBSCRIPTION_EVENT_NEW) {
-                pa_context_get_source_info_by_index(c, idx, [](auto cx, auto info, auto eol, auto d) {
-                    if (info != nullptr) {
-                        std::string s1 = "eqnix_apps.monitor";
-                        std::string s2 = "eqnix_mic.monitor";
-                        if (info->name != s1 && info->name != s2) {
-                            auto pm = static_cast<PAManager*>(d);
-                            auto si = std::make_shared<SourceInfo>();
-                            si->name = info->name;
-                            si->index = info->index;
-                            si->description = info->description;
-                            si->rate = info->sample_spec.rate;
-                            si->format = pa_sample_format_to_string(info->sample_spec.format);
-                            if (info->active_port != nullptr) {
-                                si->active_port = info->active_port->name;
-                            } else {
-                                si->active_port = "null";
-                            }
-                            Glib::signal_idle().connect_once([pm, si = move(si)] { pm->source_added.emit(si); });
-                        }
-                    }
-                }, pm);
-            } else if (e == PA_SUBSCRIPTION_EVENT_CHANGE) {
-                pa_context_get_source_info_by_index(c, idx, [](auto cx, auto info, auto eol, auto d) {
-                    if (info != nullptr) {
-                        auto pm = static_cast<PAManager*>(d);
-                        auto si = std::make_shared<SourceInfo>();
-                        si->name = info->name;
-                        si->index = info->index;
-                        si->description = info->description;
-                        si->rate = info->sample_spec.rate;
-                        si->format = pa_sample_format_to_string(info->sample_spec.format);
-                        if (info->active_port != nullptr) {
-                            si->active_port = info->active_port->name;
-                        } else {
-                            si->active_port = "null";
-                        }
-                        if (si->name == "eqnix_mic.monitor") {
-                            pm->logger.debug("si->name == eqnix_mic.monitor");
-                            // pm->mic_sink_info->rate = si->rate;
-                            // pm->mic_sink_info->format = si->format;
-                        }
-                        Glib::signal_idle().connect_once([pm, si = move(si)] { pm->source_changed.emit(si); });
-                    }
-                }, pm);
-            } else if (e == PA_SUBSCRIPTION_EVENT_REMOVE) {
-                Glib::signal_idle().connect_once([pm, idx]() { pm->source_removed.emit(idx); });
-            }
         } else if (f == PA_SUBSCRIPTION_EVENT_SINK) {
             auto e = t & PA_SUBSCRIPTION_EVENT_TYPE_MASK;
 
@@ -232,10 +161,7 @@ void PAManager::subscribe_to_events() {
         }
     }, this);
 
-    auto mask = static_cast<pa_subscription_mask_t>(PA_SUBSCRIPTION_MASK_SINK_INPUT | PA_SUBSCRIPTION_MASK_SOURCE_OUTPUT |
-                                                    PA_SUBSCRIPTION_MASK_SOURCE | PA_SUBSCRIPTION_MASK_SINK |
-                                                    PA_SUBSCRIPTION_MASK_SERVER);
-
+    auto mask = static_cast<pa_subscription_mask_t>(PA_SUBSCRIPTION_MASK_SINK_INPUT | PA_SUBSCRIPTION_MASK_SINK | PA_SUBSCRIPTION_MASK_SERVER);
     pa_context_subscribe(context, mask, [](auto c, auto success, auto d) {
         auto pm = static_cast<PAManager*>(d);
 
@@ -465,17 +391,6 @@ void PAManager::load_apps_sink() {
     }
 }
 
-// void PAManager::load_mic_sink() {
-//     logger.debug("loading eqnix microphone output sink...");
-//     auto info = get_default_source_info();
-//     if (info != nullptr) {
-//         std::string name = "eqnix_mic";
-//         std::string description = "device.description=\"eqnix(mic)\"";
-//         auto rate = info->rate;
-//         mic_sink_info = load_sink(name, description, rate);
-//     }
-// }
-
 void PAManager::find_sink_inputs() {
     pa_threaded_mainloop_lock(main_loop);
     auto o = pa_context_get_sink_input_info_list(context, [](auto c, auto info, auto eol, auto d) {
@@ -495,28 +410,6 @@ void PAManager::find_sink_inputs() {
         pa_operation_unref(o);
     } else {
         logger.warn("failed to find sink inputs");
-    }
-    pa_threaded_mainloop_unlock(main_loop);
-}
-
-void PAManager::find_source_outputs() {
-    pa_threaded_mainloop_lock(main_loop);
-    auto o = pa_context_get_source_output_info_list(context, [](auto c, auto info, auto eol, auto d) {
-        auto pm = static_cast<PAManager*>(d);
-        if (info != nullptr) {
-            pm->new_app(info);
-        } else {
-            pa_threaded_mainloop_signal(pm->main_loop, false);
-        }
-    }, this);
-
-    if (o != nullptr) {
-        while (pa_operation_get_state(o) == PA_OPERATION_RUNNING) {
-            pa_threaded_mainloop_wait(main_loop);
-        }
-        pa_operation_unref(o);
-    } else {
-        logger.warn("failed to find source outputs");
     }
     pa_threaded_mainloop_unlock(main_loop);
 }
@@ -550,40 +443,6 @@ void PAManager::find_sinks() {
         pa_operation_unref(o);
     } else {
         logger.warn("failed to find sinks");
-    }
-    pa_threaded_mainloop_unlock(main_loop);
-}
-
-void PAManager::find_sources() {
-    pa_threaded_mainloop_lock(main_loop);
-    auto o = pa_context_get_source_info_list(context, [](auto c, auto info, auto eol, auto d) {
-        auto pm = static_cast<PAManager*>(d);
-
-        if (info != nullptr) {
-            std::string s1 = "eqnix_apps.monitor";
-            std::string s2 = "eqnix_mic.monitor";
-            if (info->name != s1 && info->name != s2) {
-                auto si = std::make_shared<SourceInfo>();
-                si->name = info->name;
-                si->index = info->index;
-                si->description = info->description;
-                si->rate = info->sample_spec.rate;
-                si->format = pa_sample_format_to_string(info->sample_spec.format);
-
-                Glib::signal_idle().connect_once([pm, si = move(si)] { pm->source_added.emit(si); });
-            }
-        } else {
-            pa_threaded_mainloop_signal(pm->main_loop, false);
-        }
-    }, this);
-
-    if (o != nullptr) {
-        while (pa_operation_get_state(o) == PA_OPERATION_RUNNING) {
-            pa_threaded_mainloop_wait(main_loop);
-        }
-        pa_operation_unref(o);
-    } else {
-        logger.warn("failed to find sources");
     }
     pa_threaded_mainloop_unlock(main_loop);
 }
@@ -647,64 +506,6 @@ void PAManager::remove_sink_input_from_eqnix(const std::string& name, uint idx) 
     pa_threaded_mainloop_unlock(main_loop);
 }
 
-void PAManager::move_source_output_to_eqnix(const std::string& name, uint idx) {
-    // struct Data {
-    //     std::string name;
-    //     uint idx;
-    //     PAManager* pm;
-    // };
-    // Data data = {name, idx, this};
-    // pa_threaded_mainloop_lock(main_loop);
-    // auto o = pa_context_move_source_output_by_index(context, idx, mic_sink_info->monitor_source, [](auto c, auto success, auto data) {
-    //     auto d = static_cast<Data*>(data);
-
-    //     if (success) {
-    //         d->pm->logger.debug("source output: " + d->name + ", idx = " + std::to_string(d->idx) + " moved to PE");
-    //     } else {
-    //         d->pm->logger.critical("failed to move source output " + d->name + ", idx = " + " to PE");
-    //     }
-    //     pa_threaded_mainloop_signal(d->pm->main_loop, false);
-    // }, &data);
-
-    // if (o != nullptr) {
-    //     while (pa_operation_get_state(o) == PA_OPERATION_RUNNING) {
-    //         pa_threaded_mainloop_wait(main_loop);
-    //     }
-    //     pa_operation_unref(o);
-    // } else {
-    //     logger.critical("failed to move source output: " + name + ", idx = " + std::to_string(idx) + " to PE");
-    // }
-    // pa_threaded_mainloop_unlock(main_loop);
-}
-
-void PAManager::remove_source_output_from_eqnix(const std::string& name, uint idx) {
-    struct Data {
-        std::string name;
-        uint idx;
-        PAManager* pm;
-    };
-    Data data = {name, idx, this};
-    pa_threaded_mainloop_lock(main_loop);
-    auto o = pa_context_move_source_output_by_name(context, idx, server_info.default_source_name.c_str(), [](auto c, auto success, auto data) {
-        auto d = static_cast<Data*>(data);
-        if (success) {
-            d->pm->logger.debug("source output: " + d->name + ", idx = " + " removed from PE");
-        } else {
-            d->pm->logger.critical("failed to remove source output: " + d->name + ", idx = " + " from PE");
-        }
-        pa_threaded_mainloop_signal(d->pm->main_loop, false);
-    }, &data);
-
-    if (o != nullptr) {
-        while (pa_operation_get_state(o) == PA_OPERATION_RUNNING) {
-            pa_threaded_mainloop_wait(main_loop);
-        }
-        pa_operation_unref(o);
-    } else {
-        logger.critical("failed to remove source output: " + name + ", idx = " + std::to_string(idx) + " from PE");
-    }
-    pa_threaded_mainloop_unlock(main_loop);
-}
 
 void PAManager::set_sink_input_volume(const std::string& name, uint idx, uint8_t channels, uint value) {
     pa_volume_t raw_value = PA_VOLUME_NORM * value / 100.0;
@@ -766,71 +567,6 @@ void PAManager::set_sink_input_mute(const std::string& name, uint idx, bool stat
         pa_operation_unref(o);
     } else {
         logger.warn("failed to mute set sink input: " + name + ", idx = " + std::to_string(idx) + " to PE");
-    }
-    pa_threaded_mainloop_unlock(main_loop);
-}
-
-void PAManager::set_source_output_volume(const std::string& name, uint idx, uint8_t channels, uint value) {
-    pa_volume_t raw_value = PA_VOLUME_NORM * value / 100.0;
-    auto cvol = pa_cvolume();
-    auto cvol_ptr = pa_cvolume_set(&cvol, channels, raw_value);
-    if (cvol_ptr != nullptr) {
-        struct Data {
-            std::string name;
-            uint idx;
-            PAManager* pm;
-        };
-        Data data = {name, idx, this};
-        pa_threaded_mainloop_lock(main_loop);
-        auto o = pa_context_set_source_output_volume(context, idx, cvol_ptr, [](auto c, auto success, auto data) {
-            auto d = static_cast<Data*>(data);
-
-            if (success == 1) {
-                d->pm->logger.debug("changed volume of source output: " + d->name + ", idx = " + std::to_string(d->idx));
-            } else {
-                d->pm->logger.debug("failed to change volume of source output: " + d->name + ", idx = " + std::to_string(d->idx));
-            }
-            pa_threaded_mainloop_signal(d->pm->main_loop, false);
-        }, &data);
-
-        if (o != nullptr) {
-            while (pa_operation_get_state(o) == PA_OPERATION_RUNNING) {
-                pa_threaded_mainloop_wait(main_loop);
-            }
-            pa_operation_unref(o);
-            pa_threaded_mainloop_unlock(main_loop);
-        } else {
-            logger.warn("failed to change volume of source output: " + name + ", idx = " + std::to_string(idx));
-            pa_threaded_mainloop_unlock(main_loop);
-        }
-    }
-}
-
-void PAManager::set_source_output_mute(const std::string& name, uint idx, bool state) {
-    struct Data {
-        std::string name;
-        uint idx;
-        PAManager* pm;
-    };
-    Data data = {name, idx, this};
-    pa_threaded_mainloop_lock(main_loop);
-    auto o = pa_context_set_source_output_mute(context, idx, static_cast<int>(state), [](auto c, auto success, auto data) {
-        auto d = static_cast<Data*>(data);
-
-        if (success == 1) {
-            d->pm->logger.debug("source output: " + d->name + ", idx = " + std::to_string(d->idx) + " is muted");
-        } else {
-            d->pm->logger.critical("failed to mute source output: " + d->name + ", idx = " + std::to_string(d->idx));
-        }
-        pa_threaded_mainloop_signal(d->pm->main_loop, false);
-    }, &data);
-    if (o != nullptr) {
-        while (pa_operation_get_state(o) == PA_OPERATION_RUNNING) {
-            pa_threaded_mainloop_wait(main_loop);
-        }
-        pa_operation_unref(o);
-    } else {
-        logger.warn("failed to mute source output: " + name + ", idx = " + std::to_string(idx) + " to PE");
     }
     pa_threaded_mainloop_unlock(main_loop);
 }
@@ -993,18 +729,6 @@ void PAManager::new_app(const pa_sink_input_info* info) {
     }
 }
 
-void PAManager::new_app(const pa_source_output_info* info) {
-    auto app_info = parse_app_info(info);
-    if (app_info != nullptr) {
-        // checking if the user blacklisted this app
-        auto forbidden_app = std::find(std::begin(blacklist_in), std::end(blacklist_in), app_info->name) != std::end(blacklist_in);
-        if (!forbidden_app) {
-            app_info->app_type = "source_output";
-            Glib::signal_idle().connect_once([&, app_info = move(app_info)]() { source_output_added.emit(app_info); });
-        }
-    }
-}
-
 void PAManager::changed_app(const pa_sink_input_info* info) {
     auto app_info = parse_app_info(info);
     if (app_info != nullptr) {
@@ -1017,37 +741,6 @@ void PAManager::changed_app(const pa_sink_input_info* info) {
     }
 }
 
-void PAManager::changed_app(const pa_source_output_info* info) {
-    auto app_info = parse_app_info(info);
-
-    if (app_info != nullptr) {
-        // checking if the user blacklisted this app
-        auto forbidden_app = std::find(std::begin(blacklist_in), std::end(blacklist_in), app_info->name) != std::end(blacklist_in);
-        if (!forbidden_app) {
-            app_info->app_type = "source_output";
-            Glib::signal_idle().connect_once([&, app_info = move(app_info)]() { source_output_changed.emit(app_info); });
-        }
-    }
-}
-
-void PAManager::print_app_info(const std::shared_ptr<AppInfo>& info) {
-    std::cout << "index: " << info->index << std::endl;
-    std::cout << "name: " << info->name << std::endl;
-    std::cout << "icon name: " << info->icon_name << std::endl;
-    std::cout << "channels: " << info->channels << std::endl;
-    std::cout << "volume: " << info->volume << std::endl;
-    std::cout << "rate: " << info->rate << std::endl;
-    std::cout << "resampler: " << info->resampler << std::endl;
-    std::cout << "format: " << info->format << std::endl;
-    std::cout << "wants to play: " << info->wants_to_play << std::endl;
-}
-
 auto PAManager::app_is_connected(const pa_sink_input_info* info) -> bool {
     return info->sink == apps_sink_info->index;
 }
-
-auto PAManager::app_is_connected(const pa_source_output_info* info) -> bool {
-    return false;
-    // return info->source == mic_sink_info->monitor_source;
-}
-

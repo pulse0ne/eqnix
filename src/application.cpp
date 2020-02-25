@@ -39,9 +39,9 @@ void Application::on_activate() {
         window->show_all();
 
         pam->find_sink_inputs();
-        pam->find_source_outputs();
+        // pam->find_source_outputs();
         pam->find_sinks();
-        pam->find_sources();
+        // pam->find_sources();
     }
 }
 
