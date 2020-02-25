@@ -35,7 +35,7 @@ Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
     g_signal_connect(bus, "message::error", G_CALLBACK(on_message_error), this);
     g_signal_connect(bus, "sync-message::stream-status", G_CALLBACK(on_stream_status), this);
 
-    equalizer = std::make_unique<Equalizer>();
+    equalizer = std::make_shared<Equalizer>();
 
     source = ensure_factory_create("pulsesrc", "source");
     converter = ensure_factory_create("audioconvert", "conv");
@@ -132,6 +132,10 @@ void Pipeline::set_null_pipeline() {
         playing = false;
     }
     logger.debug(gst_element_state_get_name(state) + std::string(" -> ") + gst_element_state_get_name(pending));
+}
+
+auto Pipeline::get_equalizer() -> std::shared_ptr<Equalizer> {
+    return equalizer;
 }
 
 auto Pipeline::apps_want_to_play() -> bool {

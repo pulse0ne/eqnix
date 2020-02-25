@@ -11,7 +11,7 @@ public:
 
     EQBand bands[8]{};
 
-    GstElement* eq;
+    GstElement *eq, *fr_eq;
 };
 
 #endif // EQUALIZER_HPP

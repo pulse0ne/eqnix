@@ -24,13 +24,14 @@ class Pipeline {
     GstElement *pipeline = nullptr, *source = nullptr, *converter = nullptr, *sink = nullptr;
     GstBus* bus = nullptr;
 
-    std::unique_ptr<Equalizer> equalizer;
+    std::shared_ptr<Equalizer> equalizer;
 
     void set_source_monitor_name(const std::string& name);
     void set_output_sink_name(const std::string& name);
     void set_null_pipeline();
     void update_pipeline_state();
 
+    auto get_equalizer() -> std::shared_ptr<Equalizer>;
   private:
     std::vector<std::shared_ptr<AppInfo>> apps_list;
     uint current_rate = 0;

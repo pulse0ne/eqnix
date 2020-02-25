@@ -10,7 +10,7 @@ Application::Application() : Gtk::Application("com.github.pulse0ne.eqnix") {
     logger.debug("in Application constructor");
 
     pam = std::make_unique<PAManager>();
-    pipeline = std::make_unique<Pipeline>(pam.get());
+    pipeline = std::make_unique<Pipeline>(pam.get()); // TODO this seems suspect
 }
 
 Application::~Application() {}

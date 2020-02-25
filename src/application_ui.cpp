@@ -10,7 +10,7 @@ ApplicationUI::ApplicationUI(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Bu
         {"grid-lines", Gdk::RGBA("rgb(64,64,64)")},
         {"grid-lines-bright", Gdk::RGBA("rgb(92,92,92)")}
     };
-    builder->get_widget_derived("drawing_area", fr_plot, colors);
+    builder->get_widget_derived("drawing_area", fr_plot, colors, application->pipeline->get_equalizer());
     util::debug("initialized widget");
 
     set_default_size(800, 600);
