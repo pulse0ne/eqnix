@@ -6,7 +6,6 @@ namespace {
     gboolean on_spectrum_message(GstBus* bus, GstMessage* msg, gpointer data) {
         if (msg->type == GstMessageType::GST_MESSAGE_ELEMENT) {
             FrequencyResponsePlot* fr = static_cast<FrequencyResponsePlot*>(data);
-            // g_print("spectrum message\n");
             const GstStructure* s = gst_message_get_structure(msg);
             const std::string name = gst_structure_get_name(s);
 
@@ -14,39 +13,12 @@ namespace {
                 const GValue *magnitudes, *mag;
                 magnitudes = gst_structure_get_value(s, "magnitude");
                 g_print("[");
-                for (auto i = 0; i < 10; i++) {
+                for (auto i = 0; i < 20; i++) {
                     mag = gst_value_list_get_value(magnitudes, i);
-                    g_print(" %f ", g_value_get_float(mag));
+                    float fmag = g_value_get_float(mag);
+                    g_print(" %f ", fmag);
                 }
                 g_print("]\n");
-                /*
-                const GValue *magnitudes;
-      const GValue *phases;
-      const GValue *mag, *phase;
-      gdouble freq;
-      guint i;
-
-      if (!gst_structure_get_clock_time (s, "endtime", &endtime))
-        endtime = GST_CLOCK_TIME_NONE;
-
-      g_print ("New spectrum message, endtime %" GST_TIME_FORMAT "\n",
-          GST_TIME_ARGS (endtime));
-
-      magnitudes = gst_structure_get_value (s, "magnitude");
-      phases = gst_structure_get_value (s, "phase");
-
-      for (i = 0; i < spect_bands; ++i) {
-        freq = (gdouble) ((AUDIOFREQ / 2) * i + AUDIOFREQ / 4) / spect_bands;
-        mag = gst_value_list_get_value (magnitudes, i);
-        phase = gst_value_list_get_value (phases, i);
-
-        if (mag != NULL && phase != NULL) {
-          g_print ("band %d (freq %g): magnitude %f dB phase %f\n", i, freq,
-              g_value_get_float (mag), g_value_get_float (phase));
-        }
-      }
-      g_print ("\n");
-                */
             }
         }
         return true;
@@ -58,6 +30,7 @@ FrequencyResponsePlot::FrequencyResponsePlot(BaseObjectType* cobject, const Glib
     add_events(Gdk::BUTTON_PRESS_MASK);
 
     pipeline = gst_pipeline_new("fr-pipeline");
+    // src = gst_element_factory_make("fakesrc", "fr-src");
     src = gst_element_factory_make("audiotestsrc", "fr-src");
     spectrum = gst_element_factory_make("spectrum", "fr-spectrum");
     sink = gst_element_factory_make("fakesink", "fr-sink");
@@ -68,8 +41,9 @@ FrequencyResponsePlot::FrequencyResponsePlot(BaseObjectType* cobject, const Glib
     gst_bin_add_many(GST_BIN(pipeline), src, equalizer->fr_eq, spectrum, sink, nullptr);
     gst_element_link_many(src, equalizer->fr_eq, spectrum, sink, nullptr);
 
-    g_object_set(src, "wave", 4, nullptr);
-    g_object_set(spectrum, "interval", 1000000000, "bands", 10, "post-messages", 1, nullptr);
+    g_object_set(src, "wave", 5, "volume", 0.1, nullptr);
+    // g_object_set(src, "filltype", 4, "pattern", "1", "sizetype", 1, "sync", 1, nullptr);
+    g_object_set(spectrum, "interval", 1000000000, "bands", 20, "post-messages", 1, "threshold", -120, nullptr);
     g_object_set(sink, "sync", 1, nullptr);
 
     gst_element_set_state(pipeline, GstState::GST_STATE_PLAYING);
