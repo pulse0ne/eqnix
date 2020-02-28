@@ -1,6 +1,7 @@
 #ifndef __GST_MAGRESPONSE_H__
 #define __GST_MAGRESPONSE_H__
 
+#include <glib.h>
 #include <gst/gst.h>
 #include <gst/audio/gstaudiofilter.h>
 #include <gst/fft/gstfftf32.h>

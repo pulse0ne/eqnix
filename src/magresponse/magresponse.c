@@ -1,13 +1,10 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 #include "magresponse.h"
 #include <math.h>
 #include <string.h>
 
 GST_DEBUG_CATEGORY_STATIC(gst_magresponse_debug);
-#define GST_CAT_DEFAULT gst_magresponse_debug;
+#define GST_CAT_DEFAULT gst_magresponse_debug
 
 #if G_BYTE_ORDER == G_LITTLE_ENDIAN
 #define FORMATS "{ S16LE, S24LE, S32LE, F32LE, F64LE }"
@@ -416,4 +413,8 @@ static void gst_magresponse_message_add_array(GValue* cv, gfloat* data, guint nu
     g_value_unset(&v);
     gst_value_array_append_value(cv, &a); /* copies by value */
     g_value_unset(&a);
+}
+
+static GstFlowReturn gst_magresponse_transform_ip(GstBaseTransform* trans, GstBuffer* in) {
+    return GST_FLOW_OK;
 }
