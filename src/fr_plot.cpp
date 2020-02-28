@@ -2,58 +2,58 @@
 #include <cmath>
 #include <iomanip>
 
-namespace {
-    gboolean on_spectrum_message(GstBus* bus, GstMessage* msg, gpointer data) {
-        if (msg->type == GstMessageType::GST_MESSAGE_ELEMENT) {
-            FrequencyResponsePlot* fr = static_cast<FrequencyResponsePlot*>(data);
-            const GstStructure* s = gst_message_get_structure(msg);
-            const std::string name = gst_structure_get_name(s);
+// namespace {
+//     gboolean on_spectrum_message(GstBus* bus, GstMessage* msg, gpointer data) {
+//         if (msg->type == GstMessageType::GST_MESSAGE_ELEMENT) {
+//             FrequencyResponsePlot* fr = static_cast<FrequencyResponsePlot*>(data);
+//             const GstStructure* s = gst_message_get_structure(msg);
+//             const std::string name = gst_structure_get_name(s);
 
-            if (name == "spectrum") {
-                const GValue *magnitudes, *mag;
-                magnitudes = gst_structure_get_value(s, "magnitude");
-                g_print("[");
-                for (auto i = 0; i < 20; i++) {
-                    mag = gst_value_list_get_value(magnitudes, i);
-                    float fmag = g_value_get_float(mag);
-                    g_print(" %f ", fmag);
-                }
-                g_print("]\n");
-            }
-        }
-        return true;
-    }
-}
+//             if (name == "spectrum") {
+//                 const GValue *magnitudes, *mag;
+//                 magnitudes = gst_structure_get_value(s, "magnitude");
+//                 g_print("[");
+//                 for (auto i = 0; i < 20; i++) {
+//                     mag = gst_value_list_get_value(magnitudes, i);
+//                     float fmag = g_value_get_float(mag);
+//                     g_print(" %f ", fmag);
+//                 }
+//                 g_print("]\n");
+//             }
+//         }
+//         return true;
+//     }
+// }
 
 FrequencyResponsePlot::FrequencyResponsePlot(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& builder, Colormap _colors, std::shared_ptr<Equalizer> _equalizer)
     : Gtk::DrawingArea(cobject), nyquist(22050.0), start_freq(10.0), equalizer(_equalizer), colors(_colors) {
     add_events(Gdk::BUTTON_PRESS_MASK);
 
-    pipeline = gst_pipeline_new("fr-pipeline");
-    // src = gst_element_factory_make("fakesrc", "fr-src");
-    src = gst_element_factory_make("audiotestsrc", "fr-src");
-    spectrum = gst_element_factory_make("spectrum", "fr-spectrum");
-    sink = gst_element_factory_make("fakesink", "fr-sink");
+    // pipeline = gst_pipeline_new("fr-pipeline");
+    // // src = gst_element_factory_make("fakesrc", "fr-src");
+    // src = gst_element_factory_make("audiotestsrc", "fr-src");
+    // spectrum = gst_element_factory_make("spectrum", "fr-spectrum");
+    // sink = gst_element_factory_make("fakesink", "fr-sink");
 
-    bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-    gst_bus_add_watch(bus, on_spectrum_message, this);
+    // bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+    // gst_bus_add_watch(bus, on_spectrum_message, this);
 
-    gst_bin_add_many(GST_BIN(pipeline), src, equalizer->fr_eq, spectrum, sink, nullptr);
-    gst_element_link_many(src, equalizer->fr_eq, spectrum, sink, nullptr);
+    // gst_bin_add_many(GST_BIN(pipeline), src, equalizer->fr_eq, spectrum, sink, nullptr);
+    // gst_element_link_many(src, equalizer->fr_eq, spectrum, sink, nullptr);
 
-    g_object_set(src, "wave", 5, "volume", 0.1, nullptr);
-    // g_object_set(src, "filltype", 4, "pattern", "1", "sizetype", 1, "sync", 1, nullptr);
-    g_object_set(spectrum, "interval", 1000000000, "bands", 20, "post-messages", 1, "threshold", -120, nullptr);
-    g_object_set(sink, "sync", 1, nullptr);
+    // g_object_set(src, "wave", 5, "volume", 0.1, nullptr);
+    // // g_object_set(src, "filltype", 4, "pattern", "1", "sizetype", 1, "sync", 1, nullptr);
+    // g_object_set(spectrum, "interval", 1000000000, "bands", 20, "post-messages", 1, "threshold", -120, nullptr);
+    // g_object_set(sink, "sync", 1, nullptr);
 
-    gst_element_set_state(pipeline, GstState::GST_STATE_PLAYING);
+    // gst_element_set_state(pipeline, GstState::GST_STATE_PLAYING);
 }
 
 FrequencyResponsePlot::~FrequencyResponsePlot() {
-    gst_element_set_state(pipeline, GstState::GST_STATE_NULL);
+    // gst_element_set_state(pipeline, GstState::GST_STATE_NULL);
 
-    gst_object_unref(bus);
-    gst_object_unref(pipeline);
+    // gst_object_unref(bus);
+    // gst_object_unref(pipeline);
 }
 
 bool FrequencyResponsePlot::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
