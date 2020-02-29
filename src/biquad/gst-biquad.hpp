@@ -8,9 +8,9 @@
 
 #define GST_TYPE_BIQUAD (GstBiquad::get_type())
 #define GST_BIQUAD(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_BIQUAD, GstBiquad))
-// #define GST_IS_BIQUAD(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_BIQUAD))
+#define GST_IS_BIQUAD(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_BIQUAD))
 #define GST_BIQUAD_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_BIQUAD, GstBiquadClass))
-// #define GST_IS_BIQUAD_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_))
+#define GST_IS_BIQUAD_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_BIQUAD))
 #define GST_BIQUAD_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), GST_TYPE_BIQUAD, GstBiquadClass))
 
 struct GstBiquad {
@@ -22,6 +22,8 @@ public:
 
     gboolean emit_fr = true;
     guint num_fr_bands = 128;
+
+    gboolean isdoublewide;
 
 private:
     enum {

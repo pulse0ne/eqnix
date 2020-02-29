@@ -25,6 +25,8 @@ public:
     void set_gain(double g);
     void set_filter_type(BiquadFilterType t);
 
+    void set_samplerate(double rate);
+
     double get_frequency() { return frequency; }
     double get_q() { return q; }
     double get_gain() { return gain; }
@@ -35,8 +37,8 @@ public:
 
     void get_frequency_response(int num_freq, const double* freqs, double* mag_res, double* phase_res);
 
-    void process(const double* sourceP, double* destP, int framesToProcess);
-    void process(const float* sourceP, float* destP, int framesToProcess);
+    double process(const double source);
+    float process(const float source);
 
 private:
     // properties
@@ -44,6 +46,9 @@ private:
     double q;
     double gain;
     BiquadFilterType filter_type;
+
+    // samplerate
+    double samplerate = 44100.0;
 
     // filter params
     double b0;
@@ -58,15 +63,19 @@ private:
     double y1;
     double y2;
 
-    void set_normalized_coeefficients(double b0, double b1, double b2, double a0, double a1, double a2);
-    void set_lowpass_params();
-    void set_highshelf_params();
-    void set_peaking_params();
-    void set_lowshelf_params();
-    void set_highpass_params();
-    void set_notch_params();
-    void set_bandpass_params();
+    void set_normalized_coefficients(double nb0, double nb1, double nb2, double na0, double na1, double na2);
+
+    void update_params();
+
     void set_allpass_params();
+    void set_bandpass_params();
+    void set_highpass_params();
+    void set_highshelf_params();
+    void set_lowpass_params();
+    void set_lowshelf_params();
+    void set_notch_params();
+    void set_peaking_params();
+    
 };
 
 #endif // BIQUAD_HPP

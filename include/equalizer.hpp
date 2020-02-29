@@ -2,16 +2,15 @@
 #define EQUALIZER_HPP
 
 #include <gst/gst.h>
-#include "eq_band.hpp"
+#include <vector>
 
 class Equalizer {
 public:
     Equalizer();
     ~Equalizer();
 
-    EQBand bands[8]{};
-
-    GstElement *eq;
+    GstElement *bin;
+    std::vector<GstElement*> nodes;
 };
 
 #endif // EQUALIZER_HPP

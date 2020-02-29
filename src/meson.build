@@ -8,7 +8,6 @@ eqnix_sources = [
     'pa_manager.cpp',
     'pipeline.cpp',
     'equalizer.cpp',
-    'eq_band.cpp',
     gresources
 ]
 
@@ -20,7 +19,6 @@ eqnix_deps = [
     dependency('gtkmm-3.0', version: '>=3.20'),
     dependency('sigc++-2.0', version: ['>=2.10', '<3']),
     dependency('gstreamer-1.0', version: '>=1.10.4'),
-    # dependency('sndfile'),
     dependency('threads')
 ]
 
@@ -32,3 +30,5 @@ executable(
     install: true,
     native: true
 )
+
+subdir('biquad')

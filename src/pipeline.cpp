@@ -1,4 +1,5 @@
 #include "pipeline.hpp"
+#include "config.h"
 
 namespace {
 
@@ -26,6 +27,8 @@ void on_stream_status(const GstBus* bus, GstMessage* message, Pipeline* p) {
 Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
     gst_init(nullptr, nullptr);
 
+    gst_registry_scan_path(gst_registry_get(), PLUGINS_INSTALL_DIR);
+
     pipeline = gst_pipeline_new("eqnix-pipeline");
     bus = gst_element_get_bus(pipeline);
 
@@ -41,8 +44,8 @@ Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
     converter = ensure_factory_create("audioconvert", "conv");
     sink = ensure_factory_create("pulsesink", "sink");
 
-    gst_bin_add_many(GST_BIN(pipeline), source, converter, equalizer->eq, sink, nullptr);
-    gst_element_link_many(source, converter, equalizer->eq, sink, nullptr);
+    gst_bin_add_many(GST_BIN(pipeline), source, converter, equalizer->bin, sink, nullptr);
+    gst_element_link_many(source, converter, equalizer->bin, sink, nullptr);
 
     g_object_set(source, "volume", 1.0, nullptr);
     g_object_set(source, "mute", 0, nullptr);

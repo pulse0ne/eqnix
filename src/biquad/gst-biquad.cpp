@@ -1,4 +1,5 @@
 #include "gst-biquad.hpp"
+#include "config.h"
 
 #include <string>
 #include <cmath>
@@ -7,15 +8,17 @@
 #include <gst/glib-compat.h>
 
 #define ALLOWED_CAPS \
-    "audio/x-raw,"                                                \
-    " format=(string) {"GST_AUDIO_NE(F32)","                      \
-                        GST_AUDIO_NE(F64)" }, "                   \
-    " rate=(int)[1000,MAX],"                                      \
-    " channels=(int)[1,MAX],"                                     \
+    "audio/x-raw,"                                                      \
+    " format=(string) {" GST_AUDIO_NE(F32) "," GST_AUDIO_NE(F64) " }, " \
+    " rate=(int)[1000,MAX],"                                            \
+    " channels=(int)[1,MAX],"                                           \
     " layout=(string)interleaved"
 
 
 #define GST_TYPE_FILTER_TYPE (gst_biquad_filter_type_get_type())
+
+GST_DEBUG_CATEGORY_STATIC(biquad_debug);
+#define GST_CAT_DEFAULT (biquad_debug)
 
 static GType gst_biquad_filter_type_get_type() {
     static GType gtype = 0;
@@ -52,7 +55,8 @@ GType GstBiquad::get_type() {
         info.n_preallocs = 0;
         info.instance_init = &GstBiquad::init;
         info.value_table = 0;
-        type = g_type_register_static(GST_TYPE_AUDIO_FILTER, g_intern_static_string("Biquad_eqnix"), &info, (GTypeFlags)0);
+        type = g_type_register_static(GST_TYPE_AUDIO_FILTER, g_intern_static_string("biquad"), &info, (GTypeFlags)0);
+        g_once_init_leave(&gonce_data, (gsize) type);
     }
     return (GType) gonce_data;
 }
@@ -79,7 +83,25 @@ void GstBiquad::class_init(gpointer g_class, gpointer class_data) {
     GstAudioFilterClass* afc = GST_AUDIO_FILTER_CLASS(g_class);
     afc->setup = GstBiquad::setup;
 
-    // TODO: install properties
+    GParamFlags flags = (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | GST_PARAM_CONTROLLABLE);
+    g_object_class_install_property(obj_class, PROP_FREQUENCY, 
+        g_param_spec_double("frequency", "frequency", "center freq", 0.0, 24000.0, 350.0, flags));
+    
+    g_object_class_install_property(obj_class, PROP_Q,
+        g_param_spec_double("q", "Q", "The Q (or resonance)", 0.0001, 1000.0, 1.0, flags));
+
+    g_object_class_install_property(obj_class, PROP_GAIN,
+        g_param_spec_double("gain", "gain", "Boost or cut to apply", -40.0, 40.0, 0.0, flags));
+
+    g_object_class_install_property(obj_class, PROP_FILTER_TYPE,
+        g_param_spec_enum("filtertype", "filtertype", "Type of filter", gst_biquad_filter_type_get_type(), BiquadFilterType::PEAKING, flags));
+    
+    g_object_class_install_property(obj_class, PROP_FR_NUM_BANDS,
+        g_param_spec_uint("frbands", "frbands", "Number of bands for frequency response", 1, G_MAXUINT32, 128, flags));
+    
+    g_object_class_install_property(obj_class, PROP_EMIT_FR,
+        g_param_spec_boolean("emitfr", "emitfr", "Whether to emit FR information", FALSE, flags));
+    
 }
 
 gboolean GstBiquad::setup(GstAudioFilter* audio, const GstAudioInfo* info) {
@@ -204,16 +226,30 @@ GstFlowReturn GstBiquad::transform_ip(GstBaseTransform* trans, GstBuffer* in) {
 
     GstMapFlags flags = static_cast<GstMapFlags>(GST_MAP_READWRITE);
     gst_buffer_map(in, &map, flags);
+    guint8* data = map.data;
     int frames;
     if (biquad->isdoublewide) {
         frames = map.size / channels / sizeof(double);
         double cur;
-        for (auto c = 0; c < channels; c++) {
-            // TODO
+        for (auto f = 0; f < frames; f++) {
+            for (guint c = 0; c < channels; c++) {
+                cur = *((double*) data);
+                cur = biquad->delegate->process(cur);
+            }
+            *((double*) data) = cur;
+            data += sizeof(double);
         }
     } else {
         frames = map.size / channels / sizeof(float);
-        // TODO
+        float cur;
+        for (auto f = 0; f < frames; f++) {
+            for (guint c = 0; c < channels; c++) {
+                cur = *((float*) data);
+                cur = biquad->delegate->process(cur);
+            }
+            *((float*) data) = cur;
+            data += sizeof(float);
+        }
     }
     gst_buffer_unmap(in, &map);
     return GST_FLOW_OK;
@@ -230,12 +266,10 @@ static GValue* message_add_container(GstStructure* s, GType type, const gchar* n
 static void message_add_array(GValue* cv, std::vector<double> data, guint n) {
     GValue v = { 0, };
     GValue a = { 0, };
-    guint i;
 
     g_value_init (&a, GST_TYPE_ARRAY);
-
     g_value_init (&v, G_TYPE_FLOAT);
-    for (i = 0; i < n; i++) {
+    for (guint i = 0; i < n; i++) {
         g_value_set_float (&v, data[i]);
         gst_value_array_append_value (&a, &v);
     }
@@ -253,13 +287,13 @@ GstMessage* GstBiquad::create_fr_message() {
 
     auto rate = GST_AUDIO_FILTER_RATE(this);
     auto m = static_cast<double>(num_fr_bands) / log10(rate / 2.0);
-    for (auto i = 0; i < num_fr_bands; i++) {
-        frequencies[i] = pow10(i / m);
+    for (guint i = 0; i < num_fr_bands; i++) {
+        frequencies[i] = pow(10.0, i / m);
     }
 
     b->get_frequency_response(num_fr_bands, &frequencies[0], &mag_res[0], &phase_res[0]);
 
-    GstStructure* s = gst_structure_new("frequency-response", nullptr);
+    GstStructure* s = gst_structure_new("frequency-response", "nfreqs", G_TYPE_UINT, num_fr_bands, nullptr);
 
     GValue *mcv = message_add_container(s, GST_TYPE_ARRAY, "magnitude");
     message_add_array(mcv, mag_res, num_fr_bands);
@@ -271,11 +305,12 @@ GstMessage* GstBiquad::create_fr_message() {
 }
 
 static gboolean plugin_init(GstPlugin* plugin) {
-    // GST_DEBUG_CATEGORY_INIT()
+    GST_DEBUG_CATEGORY_INIT(biquad_debug, "eqnix", 0, "Debug category for GstQtVideoSink");
+
     if (!(gst_element_register(plugin, "biquad", GST_RANK_NONE, GST_TYPE_BIQUAD))) {
         return FALSE;
     }
     return TRUE;
 }
 
-GST_PLUGIN_DEFINE(GST_VERSION_MAJOR, GST_VERSION_MINOR, biquad, "Biquad filter", plugin_init, "0.1.0", "MIT", "eqnix", "origin")
+GST_PLUGIN_DEFINE(GST_VERSION_MAJOR, GST_VERSION_MINOR, biquad, "Biquad filter", plugin_init, VERSION, "MIT", PACKAGE, "https://github.com/pulse0ne/eqnix")
