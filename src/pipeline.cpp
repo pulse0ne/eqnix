@@ -18,6 +18,20 @@ void on_message_error(const GstBus* bus, GstMessage* message, Pipeline* p) {
     g_free(debug);
 }
 
+static void message_handler(GstBus* bus, GstMessage* message, gpointer data) {
+    g_print("element message\n");
+    if (std::strcmp(GST_OBJECT_NAME(message->src), "frequency-response") == 0) {
+        const GstStructure* s = gst_message_get_structure(message);
+        const GValue* magnitudes = gst_structure_get_value(s, "magnitude");
+        guint n_freqs;
+        gst_structure_get_uint(s, "nfreqs", &n_freqs);
+
+        for (auto i = 0; i < n_freqs; i++) {
+            g_print("%f ", g_value_get_double(gst_value_array_get_value(magnitudes, i)));
+        }
+    }
+};
+
 void on_stream_status(const GstBus* bus, GstMessage* message, Pipeline* p) {
     // TODO: RT stuff?
 }
@@ -27,7 +41,9 @@ void on_stream_status(const GstBus* bus, GstMessage* message, Pipeline* p) {
 Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
     gst_init(nullptr, nullptr);
 
+    logger.warn("about to scan");
     gst_registry_scan_path(gst_registry_get(), PLUGINS_INSTALL_DIR);
+    logger.warn("scanned");
 
     pipeline = gst_pipeline_new("eqnix-pipeline");
     bus = gst_element_get_bus(pipeline);
@@ -56,6 +72,8 @@ Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
     g_object_set(sink, "volume", 1.0, nullptr);
     g_object_set(sink, "mute", 0, nullptr);
     g_object_set(sink, "provide-clock", 1, nullptr);
+
+    g_signal_connect(bus, "message::element", G_CALLBACK(message_handler), nullptr);
 
     std::string pulse_props = "application.id=com.github.pulse0ne.eqnix.sinkinputs";
     set_pulseaudio_props(pulse_props);

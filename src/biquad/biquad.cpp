@@ -16,6 +16,7 @@ Biquad::Biquad() {
 Biquad::~Biquad() = default;
 
 double Biquad::process(const double source) {
+    g_print("=");
     double x = source;
     double y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
 
@@ -28,6 +29,7 @@ double Biquad::process(const double source) {
 }
 
 float Biquad::process(const float source) {
+    g_print("-");
     float x = source;
     float y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
 

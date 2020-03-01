@@ -28,9 +28,22 @@ Equalizer::Equalizer() {
     //     g_object_set(band, "freq", bands[i].get_freq(), "bandwidth", bands[i].get_bw(), "gain", bands[i].get_gain(), nullptr);
     //     g_object_unref(band);
     // }
-    ///  TODO: may be able to use the same internal gstiirequalizer.c math to calculate frequency response from transfer function
 
     bin = gst_bin_new("eq-bin");
+
+    id_in = gst_element_factory_make("identity", nullptr);
+    id_out = gst_element_factory_make("identity", nullptr);
+
+    gst_bin_add_many(GST_BIN(bin), id_in, id_out, nullptr);
+
+    auto sinkpad = gst_element_get_static_pad(id_in, "sink");
+    auto srcpad = gst_element_get_static_pad(id_out, "src");
+
+    gst_element_add_pad(bin, gst_ghost_pad_new("sink", sinkpad));
+    gst_element_add_pad(bin, gst_ghost_pad_new("src", srcpad));
+
+    g_object_unref(sinkpad);
+    g_object_unref(srcpad);
 
     for (auto i = 0; i < NUM_NODES; i++) {
         std::string name = "node" + std::to_string(i);
@@ -41,6 +54,20 @@ Equalizer::Equalizer() {
         nodes.push_back(node);
         gst_bin_add(GST_BIN(bin), node);
     }
+    
+    auto last = nodes[0];
+    gst_element_link(id_in, last);
+    for (auto i = 1; i < NUM_NODES; i++) {
+        gst_element_link(last, nodes[i]);
+        last = nodes[i];
+    }
+    gst_element_link(last, id_out);
+
+    /////
+    g_object_set(nodes[0], "frequency", 40.0, "gain", 30.0, "q", 200.0, nullptr);
+    /////
 }
 
-Equalizer::~Equalizer() {}
+Equalizer::~Equalizer() {
+    // TODO cleanup
+}

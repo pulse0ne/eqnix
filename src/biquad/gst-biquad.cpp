@@ -101,7 +101,13 @@ void GstBiquad::class_init(gpointer g_class, gpointer class_data) {
     
     g_object_class_install_property(obj_class, PROP_EMIT_FR,
         g_param_spec_boolean("emitfr", "emitfr", "Whether to emit FR information", FALSE, flags));
+
     
+    GstElementClass* gstelement_class = GST_ELEMENT_CLASS(g_class);
+    gst_element_class_set_static_metadata (gstelement_class, "Biquad filter",
+        "Filter/Effect/Audio",
+        "Direct Form Biquad",
+        "Tyler Snedigar <snedigart@gmail.com");
 }
 
 gboolean GstBiquad::setup(GstAudioFilter* audio, const GstAudioInfo* info) {
@@ -313,4 +319,4 @@ static gboolean plugin_init(GstPlugin* plugin) {
     return TRUE;
 }
 
-GST_PLUGIN_DEFINE(GST_VERSION_MAJOR, GST_VERSION_MINOR, biquad, "Biquad filter", plugin_init, VERSION, "MIT", PACKAGE, "https://github.com/pulse0ne/eqnix")
+GST_PLUGIN_DEFINE(GST_VERSION_MAJOR, GST_VERSION_MINOR, biquad, "Biquad filter", plugin_init, VERSION, "LGPL", PACKAGE, "https://github.com/pulse0ne/eqnix")
