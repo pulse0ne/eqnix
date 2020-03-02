@@ -1,6 +1,9 @@
 #include <stdexcept>
 #include "equalizer.hpp"
 
+#include <thread>
+#include <chrono>
+
 #define NUM_NODES 8
 
 Equalizer::Equalizer() {
@@ -64,8 +67,15 @@ Equalizer::Equalizer() {
     gst_element_link(last, id_out);
 
     /////
-    g_object_set(nodes[0], "frequency", 40.0, "gain", 30.0, "q", 200.0, nullptr);
+    g_object_set(nodes[0], "frequency", 40.0, "gain", 30.0, "q", 1.0, "emitfr", TRUE, "frbands", 10, nullptr);
     /////
+
+    std::thread([](GstElement* n) {
+        g_print("sleeping\n");
+        std::this_thread::sleep_for(std::chrono::seconds(7));
+        g_print("here\n");
+        g_object_set(n, "gain", 15.0, nullptr);
+    }, nodes[0]).detach();
 }
 
 Equalizer::~Equalizer() {

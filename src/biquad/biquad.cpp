@@ -16,7 +16,6 @@ Biquad::Biquad() {
 Biquad::~Biquad() = default;
 
 double Biquad::process(const double source) {
-    g_print("=");
     double x = source;
     double y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
 
@@ -29,7 +28,6 @@ double Biquad::process(const double source) {
 }
 
 float Biquad::process(const float source) {
-    g_print("-");
     float x = source;
     float y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
 
@@ -346,12 +344,17 @@ void Biquad::get_frequency_response(int num_freq, const double* freqs, double* m
     double na2 = a2;
     
     for (int k = 0; k < num_freq; ++k) {
+        g_print("  %f   ", freqs[k]);
         double omega = -M_PI * freqs[k];
         std::complex<double> z = std::complex<double>(cos(omega), sin(omega));
         std::complex<double> numerator = nb0 + (nb1 + nb2 * z) * z;
         std::complex<double> denominator = std::complex<double>(1, 0) + (na1 + na2 * z) * z;
+        g_print("%f\n", denominator);
         std::complex<double> response = numerator / denominator;
         mag_res[k] = static_cast<float>(abs(response));
         phase_res[k] = static_cast<float>(atan2(imag(response), real(response)));
+    }
+    for (auto i = 0; i < num_freq; ++i) {
+        g_print("%f ", mag_res[i]);
     }
 }

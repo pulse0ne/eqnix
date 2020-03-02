@@ -47,7 +47,7 @@ private:
     static void get_property(GObject* object, guint prop_id, GValue* value, GParamSpec* pspec);
     static GstFlowReturn transform_ip(GstBaseTransform* trans, GstBuffer* in);
 
-    GstMessage* create_fr_message();
+    static GstMessage* create_fr_message(GstBiquad* b);
 };
 
 struct GstBiquadClass {

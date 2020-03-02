@@ -19,14 +19,17 @@ void on_message_error(const GstBus* bus, GstMessage* message, Pipeline* p) {
 }
 
 static void message_handler(GstBus* bus, GstMessage* message, gpointer data) {
-    g_print("element message\n");
-    if (std::strcmp(GST_OBJECT_NAME(message->src), "frequency-response") == 0) {
+    g_print("element message: %s\n", GST_OBJECT_NAME(message->src));
+    if (std::strcmp(GST_OBJECT_NAME(message->src), "node0") == 0) {
+        g_print("here2\n");
         const GstStructure* s = gst_message_get_structure(message);
         const GValue* magnitudes = gst_structure_get_value(s, "magnitude");
         guint n_freqs;
         gst_structure_get_uint(s, "nfreqs", &n_freqs);
+        g_print("%d\n", n_freqs);
 
-        for (auto i = 0; i < n_freqs; i++) {
+        for (guint i = 0; i < n_freqs; i++) {
+            // TODO: problem here....somehow these aren't doubles???
             g_print("%f ", g_value_get_double(gst_value_array_get_value(magnitudes, i)));
         }
     }
@@ -41,9 +44,7 @@ void on_stream_status(const GstBus* bus, GstMessage* message, Pipeline* p) {
 Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
     gst_init(nullptr, nullptr);
 
-    logger.warn("about to scan");
     gst_registry_scan_path(gst_registry_get(), PLUGINS_INSTALL_DIR);
-    logger.warn("scanned");
 
     pipeline = gst_pipeline_new("eqnix-pipeline");
     bus = gst_element_get_bus(pipeline);

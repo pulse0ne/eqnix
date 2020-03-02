@@ -187,7 +187,7 @@ void GstBiquad::set_property(GObject* object, guint prop_id, const GValue* value
 
     if (fr_needs_update && b->emit_fr) {
         GstElement* el = GST_ELEMENT(object);
-        GstMessage* msg = b->create_fr_message();
+        GstMessage* msg = b->create_fr_message(b);
         gst_element_post_message(el, msg);
     }
 }
@@ -274,9 +274,9 @@ static void message_add_array(GValue* cv, std::vector<double> data, guint n) {
     GValue a = { 0, };
 
     g_value_init (&a, GST_TYPE_ARRAY);
-    g_value_init (&v, G_TYPE_FLOAT);
+    g_value_init (&v, G_TYPE_DOUBLE);
     for (guint i = 0; i < n; i++) {
-        g_value_set_float (&v, data[i]);
+        g_value_set_double (&v, data.at(i));
         gst_value_array_append_value (&a, &v);
     }
     g_value_unset (&v);
@@ -285,29 +285,31 @@ static void message_add_array(GValue* cv, std::vector<double> data, guint n) {
     g_value_unset (&a);
 }
 
-GstMessage* GstBiquad::create_fr_message() {
-    Biquad* b = delegate;
-    std::vector<double> frequencies(num_fr_bands);
-    std::vector<double> mag_res(num_fr_bands);
-    std::vector<double> phase_res(num_fr_bands);
+GstMessage* GstBiquad::create_fr_message(GstBiquad* gb) {
+    Biquad* b = gb->delegate;
+    guint n = gb->num_fr_bands;
+    std::vector<double> frequencies(n);
+    std::vector<double> mag_res(n);
+    std::vector<double> phase_res(n);
 
-    auto rate = GST_AUDIO_FILTER_RATE(this);
-    auto m = static_cast<double>(num_fr_bands) / log10(rate / 2.0);
-    for (guint i = 0; i < num_fr_bands; i++) {
-        frequencies[i] = pow(10.0, i / m);
+    auto rate = GST_AUDIO_FILTER_RATE(gb);
+    if (rate <= 0) rate = 48000;
+    auto m = static_cast<double>(n) / log10((rate / 2.0) / 10.0); // 10.0 = start freq
+    for (guint i = 0; i < n; i++) {
+        frequencies[i] = pow(10.0, i / m) * 10.0; // 10.0 = start freq
     }
 
-    b->get_frequency_response(num_fr_bands, &frequencies[0], &mag_res[0], &phase_res[0]);
+    b->get_frequency_response(n, &frequencies[0], &mag_res[0], &phase_res[0]);
 
-    GstStructure* s = gst_structure_new("frequency-response", "nfreqs", G_TYPE_UINT, num_fr_bands, nullptr);
+    GstStructure* s = gst_structure_new("frequency-response", "nfreqs", G_TYPE_UINT, n, nullptr);
 
     GValue *mcv = message_add_container(s, GST_TYPE_ARRAY, "magnitude");
-    message_add_array(mcv, mag_res, num_fr_bands);
+    message_add_array(mcv, mag_res, n);
 
     GValue *pcv = message_add_container(s, GST_TYPE_ARRAY, "phase");
-    message_add_array(pcv, phase_res, num_fr_bands);
+    message_add_array(pcv, phase_res, n);
 
-    return gst_message_new_element(GST_OBJECT(this), s);
+    return gst_message_new_element(GST_OBJECT(gb), s);
 }
 
 static gboolean plugin_init(GstPlugin* plugin) {
