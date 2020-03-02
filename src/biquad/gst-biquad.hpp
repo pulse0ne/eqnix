@@ -46,7 +46,6 @@ private:
     static void set_property(GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec);
     static void get_property(GObject* object, guint prop_id, GValue* value, GParamSpec* pspec);
     static GstFlowReturn transform_ip(GstBaseTransform* trans, GstBuffer* in);
-
     static GstMessage* create_fr_message(GstBiquad* b);
 };
 

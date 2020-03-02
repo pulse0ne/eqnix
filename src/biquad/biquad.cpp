@@ -11,11 +11,17 @@ static inline float flush_denormal_float(float f) {
 Biquad::Biquad() {
     set_normalized_coefficients(1, 0, 0, 1, 0, 0);
     reset();
+    samplerate = 44100.0;
+    frequency = 350.0;
+    q = 1.0;
+    gain = 0.0;
+    filter_type = BiquadFilterType::PEAKING;
+    update_params();
 }
 
 Biquad::~Biquad() = default;
 
-double Biquad::process(const double source) {
+double Biquad::process_double(const double source) {
     double x = source;
     double y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
 
@@ -27,7 +33,7 @@ double Biquad::process(const double source) {
     return y;
 }
 
-float Biquad::process(const float source) {
+float Biquad::process_float(const float source) {
     float x = source;
     float y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
 
@@ -79,7 +85,7 @@ void Biquad::reset() {
 }
 
 void Biquad::set_normalized_coefficients(double nb0, double nb1, double nb2, double na0, double na1, double na2) {
-    double a0inv = 1 / na0;
+    double a0inv = 1.0 / na0;
 
     b0 = nb0 * a0inv;
     b1 = nb1 * a0inv;
@@ -154,7 +160,7 @@ void Biquad::set_bandpass_params() {
         if (q > 0) {
             double alpha = sin(omega) / (2 * q);
             double k = cos(omega);
-    
+
             double nb0 = alpha;
             double nb1 = 0;
             double nb2 = -alpha;
@@ -229,15 +235,15 @@ void Biquad::set_highshelf_params() {
 
 void Biquad::set_lowpass_params() {
     double n_frequency = std::max(0.0, std::min(frequency / (samplerate / 2.0), 1.0));
-    
+
     if (n_frequency == 1) {
         set_normalized_coefficients(1, 0, 0, 1, 0, 0);
     } else if (n_frequency > 0) {
-        q = std::max(0.0, q);
-        double g = pow(10.0, 0.05 * q);
+        double n_q = std::max(0.0, q);
+        double g = pow(10.0, 0.05 * n_q);
         double d = sqrt((4 - sqrt(16 - 16 / (g * g))) / 2);
 
-        double theta = q * n_frequency;
+        double theta = n_q * n_frequency;
         double sn = 0.5 * d * sin(theta);
         double beta = 0.5 * (1 - sn) / (1 + sn);
         double gamma = (0.5 + beta) * cos(theta);
@@ -311,13 +317,14 @@ void Biquad::set_notch_params() {
 
 void Biquad::set_peaking_params() {
     double n_frequency = std::max(0.0, std::min(frequency / (samplerate / 2.0), 1.0));
-    q = std::max(0.0, q);
-    double A = pow(10.0, gain / 40);
+    g_print("%f  -->  %f\n", frequency, n_frequency);
+    double n_q = std::max(0.0, q);
+    double A = pow(10.0, gain / 40.0);
 
     if (n_frequency > 0 && n_frequency < 1) {
-        if (q > 0) {
+        if (n_q > 0) {
             double omega = M_PI * n_frequency;
-            double alpha = sin(omega) / (2 * q);
+            double alpha = sin(omega) / (2 * n_q);
             double k = cos(omega);
 
             double nb0 = 1 + alpha * A;
@@ -342,10 +349,11 @@ void Biquad::get_frequency_response(int num_freq, const double* freqs, double* m
     double nb2 = b2;
     double na1 = a1;
     double na2 = a2;
-    
+
     for (int k = 0; k < num_freq; ++k) {
-        g_print("  %f   ", freqs[k]);
-        double omega = -M_PI * freqs[k];
+        g_print("fr:  %f   ", freqs[k]);
+        double normalized_freq = std::min(freqs[k] / (samplerate / 2.0), 1.0);
+        double omega = -M_PI * normalized_freq;
         std::complex<double> z = std::complex<double>(cos(omega), sin(omega));
         std::complex<double> numerator = nb0 + (nb1 + nb2 * z) * z;
         std::complex<double> denominator = std::complex<double>(1, 0) + (na1 + na2 * z) * z;
@@ -357,4 +365,9 @@ void Biquad::get_frequency_response(int num_freq, const double* freqs, double* m
     for (auto i = 0; i < num_freq; ++i) {
         g_print("%f ", mag_res[i]);
     }
+}
+
+void Biquad::set_samplerate(double rate) {
+    samplerate = rate;
+    update_params();
 }

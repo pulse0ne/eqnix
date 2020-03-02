@@ -2,7 +2,7 @@ project(
     'eqnix',
     'c',
     'cpp',
-    default_options: ['cpp_std=c++17','buildtype=debugoptimized'],
+    default_options: ['cpp_std=c++17','buildtype=debugoptimized','c_std=c11'],
     version: '0.1.0',
     meson_version: '>= 0.40.0'
 )

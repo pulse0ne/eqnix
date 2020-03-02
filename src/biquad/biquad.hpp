@@ -37,8 +37,8 @@ public:
 
     void get_frequency_response(int num_freq, const double* freqs, double* mag_res, double* phase_res);
 
-    double process(const double source);
-    float process(const float source);
+    double process_double(const double source);
+    float process_float(const float source);
 
 private:
     // properties
@@ -75,7 +75,7 @@ private:
     void set_lowshelf_params();
     void set_notch_params();
     void set_peaking_params();
-    
+
 };
 
 #endif // BIQUAD_HPP

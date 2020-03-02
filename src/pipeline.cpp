@@ -21,17 +21,15 @@ void on_message_error(const GstBus* bus, GstMessage* message, Pipeline* p) {
 static void message_handler(GstBus* bus, GstMessage* message, gpointer data) {
     g_print("element message: %s\n", GST_OBJECT_NAME(message->src));
     if (std::strcmp(GST_OBJECT_NAME(message->src), "node0") == 0) {
-        g_print("here2\n");
         const GstStructure* s = gst_message_get_structure(message);
         const GValue* magnitudes = gst_structure_get_value(s, "magnitude");
         guint n_freqs;
         gst_structure_get_uint(s, "nfreqs", &n_freqs);
-        g_print("%d\n", n_freqs);
 
         for (guint i = 0; i < n_freqs; i++) {
-            // TODO: problem here....somehow these aren't doubles???
-            g_print("%f ", g_value_get_double(gst_value_array_get_value(magnitudes, i)));
+            g_print("%f ", g_value_get_double(gst_value_list_get_value(magnitudes, i)));
         }
+        g_print("\n");
     }
 };
 

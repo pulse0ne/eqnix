@@ -84,9 +84,9 @@ void GstBiquad::class_init(gpointer g_class, gpointer class_data) {
     afc->setup = GstBiquad::setup;
 
     GParamFlags flags = (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | GST_PARAM_CONTROLLABLE);
-    g_object_class_install_property(obj_class, PROP_FREQUENCY, 
+    g_object_class_install_property(obj_class, PROP_FREQUENCY,
         g_param_spec_double("frequency", "frequency", "center freq", 0.0, 24000.0, 350.0, flags));
-    
+
     g_object_class_install_property(obj_class, PROP_Q,
         g_param_spec_double("q", "Q", "The Q (or resonance)", 0.0001, 1000.0, 1.0, flags));
 
@@ -95,14 +95,14 @@ void GstBiquad::class_init(gpointer g_class, gpointer class_data) {
 
     g_object_class_install_property(obj_class, PROP_FILTER_TYPE,
         g_param_spec_enum("filtertype", "filtertype", "Type of filter", gst_biquad_filter_type_get_type(), BiquadFilterType::PEAKING, flags));
-    
+
     g_object_class_install_property(obj_class, PROP_FR_NUM_BANDS,
         g_param_spec_uint("frbands", "frbands", "Number of bands for frequency response", 1, G_MAXUINT32, 128, flags));
-    
+
     g_object_class_install_property(obj_class, PROP_EMIT_FR,
         g_param_spec_boolean("emitfr", "emitfr", "Whether to emit FR information", FALSE, flags));
 
-    
+
     GstElementClass* gstelement_class = GST_ELEMENT_CLASS(g_class);
     gst_element_class_set_static_metadata (gstelement_class, "Biquad filter",
         "Filter/Effect/Audio",
@@ -240,7 +240,7 @@ GstFlowReturn GstBiquad::transform_ip(GstBaseTransform* trans, GstBuffer* in) {
         for (auto f = 0; f < frames; f++) {
             for (guint c = 0; c < channels; c++) {
                 cur = *((double*) data);
-                cur = biquad->delegate->process(cur);
+                cur = biquad->delegate->process_double(cur);
             }
             *((double*) data) = cur;
             data += sizeof(double);
@@ -251,7 +251,7 @@ GstFlowReturn GstBiquad::transform_ip(GstBaseTransform* trans, GstBuffer* in) {
         for (auto f = 0; f < frames; f++) {
             for (guint c = 0; c < channels; c++) {
                 cur = *((float*) data);
-                cur = biquad->delegate->process(cur);
+                cur = biquad->delegate->process_float(cur);
             }
             *((float*) data) = cur;
             data += sizeof(float);
@@ -285,6 +285,18 @@ static void message_add_array(GValue* cv, std::vector<double> data, guint n) {
     g_value_unset (&a);
 }
 
+static void message_add_list(GValue* cv, std::vector<double> data, guint num_values) {
+    GValue v = { 0, };
+    guint i;
+
+    g_value_init(&v, G_TYPE_DOUBLE);
+    for (i = 0; i < num_values; i++) {
+        g_value_set_double(&v, data[i]);
+        gst_value_list_append_value(cv, &v);
+    }
+    g_value_unset (&v);
+}
+
 GstMessage* GstBiquad::create_fr_message(GstBiquad* gb) {
     Biquad* b = gb->delegate;
     guint n = gb->num_fr_bands;
@@ -293,7 +305,8 @@ GstMessage* GstBiquad::create_fr_message(GstBiquad* gb) {
     std::vector<double> phase_res(n);
 
     auto rate = GST_AUDIO_FILTER_RATE(gb);
-    if (rate <= 0) rate = 48000;
+    if (rate <= 0) rate = 44100;
+    b->set_samplerate(static_cast<double>(rate));
     auto m = static_cast<double>(n) / log10((rate / 2.0) / 10.0); // 10.0 = start freq
     for (guint i = 0; i < n; i++) {
         frequencies[i] = pow(10.0, i / m) * 10.0; // 10.0 = start freq
@@ -303,11 +316,11 @@ GstMessage* GstBiquad::create_fr_message(GstBiquad* gb) {
 
     GstStructure* s = gst_structure_new("frequency-response", "nfreqs", G_TYPE_UINT, n, nullptr);
 
-    GValue *mcv = message_add_container(s, GST_TYPE_ARRAY, "magnitude");
-    message_add_array(mcv, mag_res, n);
+    GValue *mcv = message_add_container(s, GST_TYPE_LIST, "magnitude");
+    message_add_list(mcv, mag_res, n);
 
-    GValue *pcv = message_add_container(s, GST_TYPE_ARRAY, "phase");
-    message_add_array(pcv, phase_res, n);
+    GValue *pcv = message_add_container(s, GST_TYPE_LIST, "phase");
+    message_add_list(pcv, phase_res, n);
 
     return gst_message_new_element(GST_OBJECT(gb), s);
 }
