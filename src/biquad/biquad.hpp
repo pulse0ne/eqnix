@@ -21,10 +21,10 @@ struct FilterHistory {
     double y1, y2;
 };
 
-class BiquadBase {
+class Biquad {
 public:
-    BiquadBase();
-    virtual ~BiquadBase();
+    Biquad();
+    virtual ~Biquad();
 
     void set_frequency(double f);
     void set_q(double Q);
