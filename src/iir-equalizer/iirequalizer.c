@@ -419,7 +419,11 @@ static void setup_peak_filter(GstIirEqualizer* equ, GstIirEqualizerBand* band) {
     gst_iir_equalizer_frequency_response(equ, i, mags);
     guint j = 0;
     for(; j < i; j++) {
-        g_print("  %f  ", mags[j]);
+        // let dbResponse = 20.0 * Math.log10(Math.abs(response) || 1);
+        float a = fabsf(mags[j]);
+        if (a == 0.0f) a = 1.0f;
+        float r = 20.0f * log10f(a);
+        g_print("  %f  ", r);
     }
     g_print("\n");
     g_free(mags);
@@ -666,32 +670,41 @@ static void gst_iir_equalizer_band_frequency_response(GstIirEqualizerBand* band,
     double b1 = band->b1;
     double b2 = band->b2;
 
+    // for (k = 0; k < num_freqs; ++k) {
+    //     double omega = -G_PI * freqs[k];
+    //     double complex z = CMPLX(cos(omega), sin(omega));
+    //     double complex numerator = a0 + (a1 + a2 * z) * z;
+    //     double complex denominator = CMPLX(1, 0) + (b1 + b2 * z) * z;
+    //     // double complex numerator = CMPLX(0, 1) + (b1 + b2 * z) * z;
+    //     // double complex denominator = a0 + (a1 + a2*z) * z;
+    //     double complex response = numerator / denominator;
+    //     mag_res[k] = (float)(fabs(response));
+    // }
+
     for (k = 0; k < num_freqs; ++k) {
         double omega = -G_PI * freqs[k];
-        double complex z = CMPLX(cos(omega), sin(omega));
-        double complex numerator = a0 + (a1 + a2 * z) * z;
-        double complex denominator = CMPLX(1, 0) + (b1 + b2 * z) * z;
-        double complex response = numerator / denominator;
-        mag_res[k] = (float)(abs(response));
+        double z = tan(omega);
+        double num = (b1 + b2*z) * z;
+        double den = a0 + (a1 + a2*z) * z;
+        double response = num / den;
+        mag_res[k] = fabs(response);
     }
 }
 
 static void gst_iir_equalizer_frequency_response(GstIirEqualizer* eq, guint num_freqs, float* mag_res) {
-    GValue* nbands_v;
-    g_object_get_property(G_OBJECT(eq), "num-bands", nbands_v);
-    guint nbands = g_value_get_uint(nbands_v);
+    guint nbands = eq->freq_band_count;
     float* freqs = g_malloc_n(num_freqs, sizeof(float));
-    gint rate = GST_AUDIO_FILTER_RATE(eq);
-    if (rate <= 0) rate = 44100;
-    double m = ((double) num_freqs) / log10((((double) rate) / 2.0) / LOWEST_FREQ);
+    double rate = (double) GST_AUDIO_FILTER_RATE(eq);
+    if (rate <= 0) rate = 44100.0;
+    double m = ((double) num_freqs) / log10((rate / 2.0) / LOWEST_FREQ);
     guint i, j;
     for (i = 0; i < num_freqs; i++) {
-        freqs[i] = pow(10.0, ((double)i) / m) * LOWEST_FREQ;
+        freqs[i] = (pow(10.0, ((double)i) / m) * LOWEST_FREQ) / (rate / 2.0); // may be able to simplify this
         mag_res[i] = 1.0;
     }
 
     for (i = 0; i < nbands; i++) {
-        GstIirEqualizerBand* band = GST_IIR_EQUALIZER_BAND(gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(eq), i));
+        GstIirEqualizerBand* band = eq->bands[i];
         float* mr = g_malloc_n(num_freqs, sizeof(float));
         gst_iir_equalizer_band_frequency_response(band, num_freqs, freqs, mr);
         for (j = 0; j < num_freqs; j++) {
@@ -767,8 +780,8 @@ static gboolean gst_iir_equalizer_setup(GstAudioFilter* audio, const GstAudioInf
 }
 
 static gboolean plugin_init(GstPlugin* plugin) {
-    GST_DEBUG_CATEGORY_INIT(equalizer_debug, "equalizer", 0, "equalizer");
+    GST_DEBUG_CATEGORY_INIT(equalizer_debug, "iirequalizer", 0, "iirequalizer");
     return gst_element_register(plugin, "iirequalizer", GST_RANK_NONE, GST_TYPE_IIR_EQUALIZER_NBANDS);
 }
 
-GST_PLUGIN_DEFINE(GST_VERSION_MAJOR, GST_VERSION_MINOR, equalizer, "eq", plugin_init, "0.1.0", "LGPL", PACKAGE, "https://github.com/pulse0ne/eqnix")
+GST_PLUGIN_DEFINE(GST_VERSION_MAJOR, GST_VERSION_MINOR, iirequalizer, "eq", plugin_init, "0.1.0", "LGPL", PACKAGE, "https://github.com/pulse0ne/eqnix")

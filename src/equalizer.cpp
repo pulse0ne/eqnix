@@ -63,7 +63,7 @@ Equalizer::Equalizer() {
     g_object_set(bin, "num-bands", 1, nullptr);
 
     GObject* band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 0);
-    g_object_set(band, "freq", 40.0, "gain", 12.0, "bandwidth", 100.0, "type", "peak", nullptr); // TODO: how to do enums???
+    g_object_set(band, "freq", 40.0, "gain", 12.0, "bandwidth", 100.0, "type", 0, nullptr);
 }
 
 Equalizer::~Equalizer() {

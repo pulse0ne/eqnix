@@ -15,7 +15,7 @@ plugin_deps = [
 ]
 
 library(
-    'iirequealizer',
+    'iirequalizer',
     plugin_sources,
     include_directories: [include_dir, config_h_dir],
     dependencies: plugin_deps,
