@@ -19,19 +19,19 @@ Biquad::Biquad() {
 Biquad::~Biquad() = default;
 
 double Biquad::process(const double source, uint chan_ix) {
-    FilterHistory fh = history.at(chan_ix);
+    std::shared_ptr<FilterHistory> fh = history.at(chan_ix);
     double x = source;
-    double x1 = fh.x1;
-    double x2 = fh.x2;
-    double y1 = fh.y1;
-    double y2 = fh.y2;
+    double x1 = fh->x1;
+    double x2 = fh->x2;
+    double y1 = fh->y1;
+    double y2 = fh->y2;
 
     double y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
 
-    fh.x2 = flush_denormal(x1);
-    fh.x1 = flush_denormal(x);
-    fh.y2 = flush_denormal(y1);
-    fh.y1 = flush_denormal(y);
+    fh->x2 = flush_denormal(x1);
+    fh->x1 = flush_denormal(x);
+    fh->y2 = flush_denormal(y1);
+    fh->y1 = flush_denormal(y);
 
     return y;
 }
@@ -71,15 +71,11 @@ void Biquad::set_zero_pole_pairs(std::complex<double> zero, std::complex<double>
     set_normalized_coefficients(zb0, zb1, zb2, 1, za1, za2);
 }
 
-// void Biquad::reset() {
-//     for (FilterHistory<double> h : histories_double) {
-//         h.x1 = h.x2 = h.y1 = h.y2 = 0;
-//     }
-
-//     for (FilterHistory<float> h : histories_float) {
-//         h.x1 = h.x2 = h.y1 = h.y2 = 0;
-//     }
-// }
+void Biquad::reset() {
+    for (std::shared_ptr<FilterHistory> h : history) {
+        h->x1 = h->x2 = h->y1 = h->y2 = 0;
+    }
+}
 
 void Biquad::set_normalized_coefficients(double nb0, double nb1, double nb2, double na0, double na1, double na2) {
     double a0inv = 1.0 / na0;
@@ -354,7 +350,7 @@ void Biquad::get_frequency_response(int num_freq, const double* freqs, double* m
         std::complex<double> z = std::complex<double>(cos(omega), sin(omega));
         std::complex<double> numerator = nb0 + (nb1 + nb2 * z) * z;
         std::complex<double> denominator = std::complex<double>(1, 0) + (na1 + na2 * z) * z;
-        g_print("%f\n", denominator);
+        // g_print("%f\n", denominator);
         std::complex<double> response = numerator / denominator;
         mag_res[k] = static_cast<float>(abs(response));
         phase_res[k] = static_cast<float>(atan2(imag(response), real(response)));
@@ -373,6 +369,8 @@ void Biquad::set_channels(uint num_channels) {
     if (num_channels != history.size()) {
         channels = num_channels;
         history.clear();
-
+        for (uint i = 0; i < num_channels; i++) {
+            history.push_back(std::make_shared<FilterHistory>(FilterHistory{0, 0, 0, 0}));
+        }
     }
 }

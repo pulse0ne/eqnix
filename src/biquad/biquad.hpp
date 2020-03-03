@@ -4,6 +4,7 @@
 #include <gst/gst.h>
 #include <complex>
 #include <vector>
+#include <memory>
 
 typedef enum {
     ALLPASS = 0,
@@ -66,7 +67,7 @@ private:
     double a2;
 
     // history
-    std::vector<FilterHistory> history;
+    std::vector<std::shared_ptr<FilterHistory>> history;
 
     void set_normalized_coefficients(double nb0, double nb1, double nb2, double na0, double na1, double na2);
 

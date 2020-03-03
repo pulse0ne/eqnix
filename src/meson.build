@@ -31,5 +31,5 @@ executable(
     native: true
 )
 
-subdir('biquad')
-# subdir('iir-equalizer')
+# subdir('biquad')
+subdir('iir-equalizer')

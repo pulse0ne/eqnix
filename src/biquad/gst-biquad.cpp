@@ -111,23 +111,19 @@ void GstBiquad::class_init(gpointer g_class, gpointer class_data) {
 }
 
 gboolean GstBiquad::setup(GstAudioFilter* audio, const GstAudioInfo* info) {
-    // GstBiquad* b = GST_BIQUAD(audio);
-    // switch (GST_AUDIO_INFO_FORMAT(info)) {
-    //     case GST_AUDIO_FORMAT_F32:
-    //         b->isdoublewide = false;
-    //         if (b->delegate) delete b->delegate;
-    //         b->delegate = new Biquad<float>();
-    //         // TODO:  biquad properties
-    //         break;
-    //     case GST_AUDIO_FORMAT_F64:
-    //         b->isdoublewide = true;
-    //         break;
-    //     default:
-    //         return FALSE;
-    // }
     GstBiquad* b = GST_BIQUAD(audio);
     guint channels = GST_AUDIO_INFO_CHANNELS(info);
     b->delegate->set_channels(channels);
+    switch (GST_AUDIO_INFO_FORMAT(info)) {
+        case GST_AUDIO_FORMAT_F32:
+            b->isdoublewide = false;
+            break;
+        case GST_AUDIO_FORMAT_F64:
+            b->isdoublewide = true;
+            break;
+        default:
+            return FALSE;
+    }
     return TRUE;
 }
 
@@ -248,7 +244,7 @@ GstFlowReturn GstBiquad::transform_ip(GstBaseTransform* trans, GstBuffer* in) {
         for (auto f = 0; f < frames; f++) {
             for (guint c = 0; c < channels; c++) {
                 cur = *((double*) data);
-                cur = biquad->delegate->process_double(cur, c);
+                cur = biquad->delegate->process(cur, c);
             }
             *((double*) data) = cur;
             data += sizeof(double);
@@ -259,7 +255,7 @@ GstFlowReturn GstBiquad::transform_ip(GstBaseTransform* trans, GstBuffer* in) {
         for (auto f = 0; f < frames; f++) {
             for (guint c = 0; c < channels; c++) {
                 cur = *((float*) data);
-                cur = biquad->delegate->process_float(cur, c);
+                cur = biquad->delegate->process(cur, c);
             }
             *((float*) data) = cur;
             data += sizeof(float);
