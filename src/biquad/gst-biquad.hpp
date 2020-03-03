@@ -18,7 +18,7 @@ public:
     GstAudioFilter parent;
     static GType get_type();
 
-    Biquad* delegate;
+    BiquadBase* delegate;
 
     gboolean emit_fr = true;
     guint num_fr_bands = 128;

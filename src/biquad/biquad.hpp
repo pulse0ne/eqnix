@@ -3,6 +3,7 @@
 
 #include <gst/gst.h>
 #include <complex>
+#include <vector>
 
 typedef enum {
     ALLPASS = 0,
@@ -15,16 +16,22 @@ typedef enum {
     PEAKING
 } BiquadFilterType;
 
-class Biquad {
+struct FilterHistory {
+    double x1, x2;
+    double y1, y2;
+};
+
+class BiquadBase {
 public:
-    Biquad();
-    ~Biquad();
+    BiquadBase();
+    virtual ~BiquadBase();
 
     void set_frequency(double f);
     void set_q(double Q);
     void set_gain(double g);
     void set_filter_type(BiquadFilterType t);
 
+    void set_channels(uint num_channels);
     void set_samplerate(double rate);
 
     double get_frequency() { return frequency; }
@@ -33,12 +40,10 @@ public:
     BiquadFilterType get_filter_type() { return filter_type; }
 
     void set_zero_pole_pairs(std::complex<double> zero, std::complex<double> pole);
-    void reset();
+    virtual void reset();
 
     void get_frequency_response(int num_freq, const double* freqs, double* mag_res, double* phase_res);
-
-    double process_double(const double source);
-    float process_float(const float source);
+    double process(const double source, uint chan_ix);
 
 private:
     // properties
@@ -50,6 +55,9 @@ private:
     // samplerate
     double samplerate = 44100.0;
 
+    // channels
+    uint channels = 1;
+
     // filter params
     double b0;
     double b1;
@@ -58,10 +66,7 @@ private:
     double a2;
 
     // history
-    double x1;
-    double x2;
-    double y1;
-    double y2;
+    std::vector<FilterHistory> history;
 
     void set_normalized_coefficients(double nb0, double nb1, double nb2, double na0, double na1, double na2);
 

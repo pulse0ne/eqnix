@@ -108,7 +108,8 @@ static void gst_iir_equalizer_nbands_class_init(GstIirEqualizerNBandsClass* klas
 
     gst_element_class_set_static_metadata(gstelement_class, "N Band Equalizer", "Filter/Effect/Audio", "Direct Form IIR equalizer",
                                           "Benjamin Otte <otte@gnome.org>,"
-                                          " Stefan Kost <ensonic@users.sf.net>");
+                                          " Stefan Kost <ensonic@users.sf.net>,"
+                                          " Tyler Snedigar <snedigart@gmail.com");
 }
 
 static void gst_iir_equalizer_nbands_init(GstIirEqualizerNBands* equ_n) {

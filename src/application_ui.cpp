@@ -13,7 +13,7 @@ ApplicationUI::ApplicationUI(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Bu
     builder->get_widget_derived("drawing_area", fr_plot, colors, application->pipeline->get_equalizer());
     util::debug("initialized widget");
 
-    set_default_size(800, 600);
+    set_default_size(300, 200);
 }
 
 ApplicationUI::~ApplicationUI() {}

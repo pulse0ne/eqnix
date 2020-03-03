@@ -1,11 +1,7 @@
 #include "biquad.hpp"
 
-static inline double flush_denormal_double(double d) {
+static inline double flush_denormal(double d) {
     return (fabs(d) < DBL_MIN) ? 0.0f : d;
-}
-
-static inline float flush_denormal_float(float f) {
-    return (fabs(f) < FLT_MIN) ? 0.0f : f;
 }
 
 Biquad::Biquad() {
@@ -17,30 +13,25 @@ Biquad::Biquad() {
     gain = 0.0;
     filter_type = BiquadFilterType::PEAKING;
     update_params();
+    set_channels(1);
 }
 
 Biquad::~Biquad() = default;
 
-double Biquad::process_double(const double source) {
+double Biquad::process(const double source, uint chan_ix) {
+    FilterHistory fh = history.at(chan_ix);
     double x = source;
+    double x1 = fh.x1;
+    double x2 = fh.x2;
+    double y1 = fh.y1;
+    double y2 = fh.y2;
+
     double y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
 
-    x2 = flush_denormal_double(x1);
-    x1 = flush_denormal_double(x);
-    y2 = flush_denormal_double(y1);
-    y1 = flush_denormal_double(y);
-
-    return y;
-}
-
-float Biquad::process_float(const float source) {
-    float x = source;
-    float y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
-
-    x2 = flush_denormal_float(x1);
-    x1 = flush_denormal_float(x);
-    y2 = flush_denormal_float(y1);
-    y1 = flush_denormal_float(y);
+    fh.x2 = flush_denormal(x1);
+    fh.x1 = flush_denormal(x);
+    fh.y2 = flush_denormal(y1);
+    fh.y1 = flush_denormal(y);
 
     return y;
 }
@@ -80,9 +71,15 @@ void Biquad::set_zero_pole_pairs(std::complex<double> zero, std::complex<double>
     set_normalized_coefficients(zb0, zb1, zb2, 1, za1, za2);
 }
 
-void Biquad::reset() {
-    x1 = x2 = y1 = y2 = 0;
-}
+// void Biquad::reset() {
+//     for (FilterHistory<double> h : histories_double) {
+//         h.x1 = h.x2 = h.y1 = h.y2 = 0;
+//     }
+
+//     for (FilterHistory<float> h : histories_float) {
+//         h.x1 = h.x2 = h.y1 = h.y2 = 0;
+//     }
+// }
 
 void Biquad::set_normalized_coefficients(double nb0, double nb1, double nb2, double na0, double na1, double na2) {
     double a0inv = 1.0 / na0;
@@ -370,4 +367,11 @@ void Biquad::get_frequency_response(int num_freq, const double* freqs, double* m
 void Biquad::set_samplerate(double rate) {
     samplerate = rate;
     update_params();
+}
+
+void Biquad::set_channels(uint num_channels) {
+    if (channels != num_channels) {
+        channels = num_channels;
+        // TODO: allocate
+    }
 }

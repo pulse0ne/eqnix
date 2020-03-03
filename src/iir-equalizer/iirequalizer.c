@@ -44,7 +44,7 @@ static GstFlowReturn gst_iir_equalizer_transform_ip(GstBaseTransform* btrans, Gs
 static void set_passthrough(GstIirEqualizer* equ);
 
 static void gst_iir_equalizer_frequency_response(GstIirEqualizer* eq, guint num_freqs, float* mag_res);
-static void gst_iir_equalizer_band_frequency_response(GstIirEqualizerBand* band, guint num_freqs, const float* freqs, float* mag_res);
+static void gst_iir_equalizer_band_frequency_response(GstIirEqualizerBand* band, guint rate, guint num_freqs, const float* freqs, float* mag_res);
 
 #define ALLOWED_CAPS                                                    \
     "audio/x-raw,"                                                      \
@@ -423,7 +423,7 @@ static void setup_peak_filter(GstIirEqualizer* equ, GstIirEqualizerBand* band) {
         float a = fabsf(mags[j]);
         if (a == 0.0f) a = 1.0f;
         float r = 20.0f * log10f(a);
-        g_print("  %f  ", r);
+        g_print("  %f  ", mags[j]); //r);
     }
     g_print("\n");
     g_free(mags);
@@ -662,7 +662,7 @@ void gst_iir_equalizer_compute_frequencies(GstIirEqualizer* equ, guint new_count
 CREATE_OPTIMIZED_FUNCTIONS(gfloat);
 CREATE_OPTIMIZED_FUNCTIONS(gdouble);
 
-static void gst_iir_equalizer_band_frequency_response(GstIirEqualizerBand* band, guint num_freqs, const float* freqs, float* mag_res) {
+static void gst_iir_equalizer_band_frequency_response(GstIirEqualizerBand* band, guint rate, guint num_freqs, const float* freqs, float* mag_res) {
     guint k;
     double a0 = band->a0;
     double a1 = band->a1;
@@ -681,13 +681,25 @@ static void gst_iir_equalizer_band_frequency_response(GstIirEqualizerBand* band,
     //     mag_res[k] = (float)(fabs(response));
     // }
 
+
+    // for (k = 0; k < num_freqs; ++k) {
+    //     double omega = -G_PI * freqs[k];
+    //     double z = tan(omega);
+    //     double num = (b1 + b2*z) * z;
+    //     double den = a0 + (a1 + a2*z) * z;
+    //     double response = num / den;
+    //     mag_res[k] = fabs(response);
+    // }
+
+    // H(z) = (b0 + b1*z^(-1) + b2*z^(-2))/(1 + a1*z^(-1) + a2*z^(-2))
     for (k = 0; k < num_freqs; ++k) {
-        double omega = -G_PI * freqs[k];
-        double z = tan(omega);
-        double num = (b1 + b2*z) * z;
-        double den = a0 + (a1 + a2*z) * z;
-        double response = num / den;
-        mag_res[k] = fabs(response);
+        double omega = calculate_omega(freqs[k], rate);
+        double z = 1.0 / omega;
+        double num = a0 + (a1 + a2 * z) * z;
+        double denom = 1 + (b1 + b2 * z) * z;
+        double res = num / denom;
+        mag_res[k] = fabsf((float)res);
+        g_print(" %f  -->  %f\n", freqs[k], mag_res[k]);
     }
 }
 
@@ -699,14 +711,14 @@ static void gst_iir_equalizer_frequency_response(GstIirEqualizer* eq, guint num_
     double m = ((double) num_freqs) / log10((rate / 2.0) / LOWEST_FREQ);
     guint i, j;
     for (i = 0; i < num_freqs; i++) {
-        freqs[i] = (pow(10.0, ((double)i) / m) * LOWEST_FREQ) / (rate / 2.0); // may be able to simplify this
+        freqs[i] = (pow(10.0, ((double)i) / m) * LOWEST_FREQ); // / (rate / 2.0); // may be able to simplify this
         mag_res[i] = 1.0;
     }
 
     for (i = 0; i < nbands; i++) {
         GstIirEqualizerBand* band = eq->bands[i];
         float* mr = g_malloc_n(num_freqs, sizeof(float));
-        gst_iir_equalizer_band_frequency_response(band, num_freqs, freqs, mr);
+        gst_iir_equalizer_band_frequency_response(band, (guint) rate, num_freqs, freqs, mr);
         for (j = 0; j < num_freqs; j++) {
             mag_res[j] *= mr[j];
         }
