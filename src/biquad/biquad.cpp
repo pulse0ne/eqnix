@@ -370,8 +370,9 @@ void Biquad::set_samplerate(double rate) {
 }
 
 void Biquad::set_channels(uint num_channels) {
-    if (channels != num_channels) {
+    if (num_channels != history.size()) {
         channels = num_channels;
-        // TODO: allocate
+        history.clear();
+
     }
 }
