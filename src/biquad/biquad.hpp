@@ -43,8 +43,8 @@ public:
     void set_zero_pole_pairs(std::complex<double> zero, std::complex<double> pole);
     virtual void reset();
 
-    void get_frequency_response(int num_freq, const double* freqs, double* mag_res, double* phase_res);
-    double process(const double source, uint chan_ix);
+    void get_frequency_response(int num_freq, const float* freqs, float* mag_res, float* phase_res);
+    double process(const float source, uint chan_ix);
 
 private:
     // properties

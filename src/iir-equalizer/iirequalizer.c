@@ -100,7 +100,7 @@ struct _GstIirEqualizerBand {
 
     /* second order iir filter */
     gdouble b1, b2;     /* IIR coefficients for outputs */
-    gdouble a0, a1, a2; /* IIR coefficients for inputs */
+    gdouble a0, a1, a2;
 };
 
 struct _GstIirEqualizerBandClass {
@@ -415,27 +415,31 @@ static void setup_peak_filter(GstIirEqualizer* equ, GstIirEqualizerBand* band) {
     }
 
     {
-        double A, omega, sn, cs, alpha, beta;
-        double a0, a1, a2, b0, b1, b2;
-
-        A = pow(10, band->gain / 40.0);
-        omega = 2.0 * G_PI * band->freq / rate;
-        sn = sin(omega);
-        cs = cos(omega);
-        alpha = sn * sinh(G_LN2 / 2 * calculate_bw(band, rate) * omega / sn);
-        beta = sqrt(A + A);
-
-        a0 = 1 + (alpha / A);
-
-        b0 = (1 + (alpha * A)) / a0;
-        b1 = (-2 * cs) / a0;
-        b2 = (1 - (alpha * A)) / a0;
-        a1 = (-2 * cs) / a0;
-        a2 = (1 - (alpha / A)) / a0;
-
-        GST_WARNING("gain = %5.1f, width= %7.2f, freq = %7.2f, alpha = %7.5f, a0 = %7.5g, a1 = %7.5g, a2=%7.5g b1 = %7.5g, b2 = %7.5g", band->gain, band->width, band->freq, alpha, a0, a1, a2, b1, b2);
-
+        gdouble A, omega, sn, cs, alpha;
     }
+
+    // {
+    //     double A, omega, sn, cs, alpha, beta;
+    //     double a0, a1, a2, b0, b1, b2;
+
+    //     A = pow(10, band->gain / 40.0);
+    //     omega = 2.0 * G_PI * band->freq / rate;
+    //     sn = sin(omega);
+    //     cs = cos(omega);
+    //     alpha = sn * sinh(G_LN2 / 2 * calculate_bw(band, rate) * omega / sn);
+    //     beta = sqrt(A + A);
+
+    //     a0 = 1 + (alpha / A);
+
+    //     b0 = (1 + (alpha * A)) / a0;
+    //     b1 = (-2 * cs) / a0;
+    //     b2 = (1 - (alpha * A)) / a0;
+    //     a1 = (-2 * cs) / a0;
+    //     a2 = (1 - (alpha / A)) / a0;
+
+    //     GST_WARNING("gain = %5.1f, width= %7.2f, freq = %7.2f, alpha = %7.5f, a0 = %7.5g, a1 = %7.5g, a2=%7.5g b1 = %7.5g, b2 = %7.5g", band->gain, band->width, band->freq, alpha, a0, a1, a2, b1, b2);
+
+    // }
 
     // guint i = 10;
     // float* mags = g_malloc_n(10, sizeof(i));

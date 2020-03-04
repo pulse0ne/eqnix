@@ -114,6 +114,7 @@ gboolean GstBiquad::setup(GstAudioFilter* audio, const GstAudioInfo* info) {
     GstBiquad* b = GST_BIQUAD(audio);
     guint channels = GST_AUDIO_INFO_CHANNELS(info);
     b->delegate->set_channels(channels);
+    g_print("---> HERE\n");
     switch (GST_AUDIO_INFO_FORMAT(info)) {
         case GST_AUDIO_FORMAT_F32:
             b->isdoublewide = false;
@@ -273,7 +274,7 @@ static GValue* message_add_container(GstStructure* s, GType type, const gchar* n
     return (GValue*) gst_structure_get_value(s, name);
 }
 
-static void message_add_array(GValue* cv, std::vector<double> data, guint n) {
+static void message_add_array(GValue* cv, std::vector<float> data, guint n) {
     GValue v = { 0, };
     GValue a = { 0, };
 
@@ -289,7 +290,7 @@ static void message_add_array(GValue* cv, std::vector<double> data, guint n) {
     g_value_unset (&a);
 }
 
-static void message_add_list(GValue* cv, std::vector<double> data, guint num_values) {
+static void message_add_list(GValue* cv, std::vector<float> data, guint num_values) {
     GValue v = { 0, };
     guint i;
 
@@ -304,9 +305,9 @@ static void message_add_list(GValue* cv, std::vector<double> data, guint num_val
 GstMessage* GstBiquad::create_fr_message(GstBiquad* gb) {
     Biquad* b = gb->delegate;
     guint n = gb->num_fr_bands;
-    std::vector<double> frequencies(n);
-    std::vector<double> mag_res(n);
-    std::vector<double> phase_res(n);
+    std::vector<float> frequencies(n);
+    std::vector<float> mag_res(n);
+    std::vector<float> phase_res(n);
 
     auto rate = GST_AUDIO_FILTER_RATE(gb);
     if (rate <= 0) rate = 44100;

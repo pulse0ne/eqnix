@@ -1,7 +1,7 @@
 #include "biquad.hpp"
 
 static inline double flush_denormal(double d) {
-    return (fabs(d) < DBL_MIN) ? 0.0f : d;
+    return (fabs(d) < DBL_MIN) ? 0 : d;
 }
 
 Biquad::Biquad() {
@@ -18,8 +18,9 @@ Biquad::Biquad() {
 
 Biquad::~Biquad() = default;
 
-double Biquad::process(const double source, uint chan_ix) {
+double Biquad::process(const float source, uint chan_ix) {
     std::shared_ptr<FilterHistory> fh = history.at(chan_ix);
+    g_print("%d, %f\n", chan_ix, fh->x1);
     double x = source;
     double x1 = fh->x1;
     double x2 = fh->x2;
@@ -72,6 +73,7 @@ void Biquad::set_zero_pole_pairs(std::complex<double> zero, std::complex<double>
 }
 
 void Biquad::reset() {
+    g_print("\n-->filter reset() called\n");
     for (std::shared_ptr<FilterHistory> h : history) {
         h->x1 = h->x2 = h->y1 = h->y2 = 0;
     }
@@ -145,7 +147,7 @@ void Biquad::set_allpass_params() {
 }
 
 void Biquad::set_bandpass_params() {
-    double n_frequency = std::max(0.0, frequency / (samplerate / 2.0));
+    double n_frequency = std::max(0.0, std::min(frequency / (samplerate / 2.0), 1.0));
     q = std::max(0.0, q);
 
     if (n_frequency > 0 && n_frequency < 1) {
@@ -336,7 +338,7 @@ void Biquad::set_peaking_params() {
     }
 }
 
-void Biquad::get_frequency_response(int num_freq, const double* freqs, double* mag_res, double* phase_res) {
+void Biquad::get_frequency_response(int num_freq, const float* freqs, float* mag_res, float* phase_res) {
     double nb0 = b0;
     double nb1 = b1;
     double nb2 = b2;
@@ -344,7 +346,7 @@ void Biquad::get_frequency_response(int num_freq, const double* freqs, double* m
     double na2 = a2;
 
     for (int k = 0; k < num_freq; ++k) {
-        g_print("fr:  %f   ", freqs[k]);
+        // g_print("fr:  %f   ", freqs[k]);
         double normalized_freq = std::min(freqs[k] / (samplerate / 2.0), 1.0);
         double omega = -M_PI * normalized_freq;
         std::complex<double> z = std::complex<double>(cos(omega), sin(omega));
