@@ -18,32 +18,32 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef __GST_IIR_EQUALIZER__
-#define __GST_IIR_EQUALIZER__
+#ifndef __IIR_EQUALIZER__
+#define __IIR_EQUALIZER__
 
 #include <gst/audio/gstaudiofilter.h>
 
-typedef struct _GstIirEqualizer GstIirEqualizer;
-typedef struct _GstIirEqualizerClass GstIirEqualizerClass;
-typedef struct _GstIirEqualizerBand GstIirEqualizerBand;
+typedef struct _IirEqualizer IirEqualizer;
+typedef struct _IirEqualizerClass IirEqualizerClass;
+typedef struct _IirEqualizerBand IirEqualizerBand;
 
-#define GST_TYPE_IIR_EQUALIZER (gst_iir_equalizer_get_type())
-#define GST_IIR_EQUALIZER(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_IIR_EQUALIZER, GstIirEqualizer))
-#define GST_IIR_EQUALIZER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_IIR_EQUALIZER, GstIirEqualizerClass))
-#define GST_IS_IIR_EQUALIZER(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_IIR_EQUALIZER))
-#define GST_IS_IIR_EQUALIZER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_IIR_EQUALIZER))
+#define TYPE_IIR_EQUALIZER (iir_equalizer_get_type())
+#define IIR_EQUALIZER(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_IIR_EQUALIZER, IirEqualizer))
+#define IIR_EQUALIZER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_IIR_EQUALIZER, IirEqualizerClass))
+#define IS_IIR_EQUALIZER(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_IIR_EQUALIZER))
+#define IS_IIR_EQUALIZER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_IIR_EQUALIZER))
 
 #define LOWEST_FREQ (10.0)
 #define HIGHEST_FREQ (20000.0)
 
-typedef void (*ProcessFunc)(GstIirEqualizer* eq, guint8* data, guint size, guint channels);
+typedef void (*ProcessFunc)(IirEqualizer* eq, guint8* data, guint size, guint channels);
 
-struct _GstIirEqualizer {
+struct _IirEqualizer {
     GstAudioFilter audiofilter;
 
     /*< private >*/
     GMutex bands_lock;
-    GstIirEqualizerBand** bands;
+    IirEqualizerBand** bands;
 
     /* properties */
     guint freq_band_count;
@@ -56,12 +56,12 @@ struct _GstIirEqualizer {
     ProcessFunc process;
 };
 
-struct _GstIirEqualizerClass {
+struct _IirEqualizerClass {
     GstAudioFilterClass audiofilter_class;
 };
 
-extern void gst_iir_equalizer_compute_frequencies(GstIirEqualizer* equ, guint new_count);
+extern void iir_equalizer_compute_frequencies(IirEqualizer* equ, guint new_count);
 
-extern GType gst_iir_equalizer_get_type(void);
+extern GType iir_equalizer_get_type(void);
 
-#endif /* __GST_IIR_EQUALIZER__ */
+#endif /* __IIR_EQUALIZER__ */

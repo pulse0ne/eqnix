@@ -18,28 +18,28 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef __GST_IIR_EQUALIZER_NBANDS__
-#define __GST_IIR_EQUALIZER_NBANDS__
+#ifndef __IIR_EQUALIZER_NBANDS__
+#define __IIR_EQUALIZER_NBANDS__
 
 #include "iirequalizer.h"
 
-typedef struct _GstIirEqualizerNBands GstIirEqualizerNBands;
-typedef struct _GstIirEqualizerNBandsClass GstIirEqualizerNBandsClass;
+typedef struct _IirEqualizerNBands IirEqualizerNBands;
+typedef struct _IirEqualizerNBandsClass IirEqualizerNBandsClass;
 
-#define GST_TYPE_IIR_EQUALIZER_NBANDS (gst_iir_equalizer_nbands_get_type())
-#define GST_IIR_EQUALIZER_NBANDS(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_IIR_EQUALIZER_NBANDS, GstIirEqualizerNBands))
-#define GST_IIR_EQUALIZER_NBANDS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_IIR_EQUALIZER_NBANDS, GstIirEqualizerNBandsClass))
-#define GST_IS_IIR_EQUALIZER_NBANDS(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_IIR_EQUALIZER_NBANDS))
-#define GST_IS_IIR_EQUALIZER_NBANDS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_IIR_EQUALIZER_NBANDS))
+#define TYPE_IIR_EQUALIZER_NBANDS (iir_equalizer_nbands_get_type())
+#define IIR_EQUALIZER_NBANDS(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_IIR_EQUALIZER_NBANDS, IirEqualizerNBands))
+#define IIR_EQUALIZER_NBANDS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_IIR_EQUALIZER_NBANDS, IirEqualizerNBandsClass))
+#define IS_IIR_EQUALIZER_NBANDS(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_IIR_EQUALIZER_NBANDS))
+#define IS_IIR_EQUALIZER_NBANDS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_IIR_EQUALIZER_NBANDS))
 
-struct _GstIirEqualizerNBands {
-    GstIirEqualizer equalizer;
+struct _IirEqualizerNBands {
+    IirEqualizer equalizer;
 };
 
-struct _GstIirEqualizerNBandsClass {
-    GstIirEqualizerClass equalizer_class;
+struct _IirEqualizerNBandsClass {
+    IirEqualizerClass equalizer_class;
 };
 
-extern GType gst_iir_equalizer_nbands_get_type(void);
+extern GType iir_equalizer_nbands_get_type(void);
 
-#endif /* __GST_IIR_EQUALIZER_NBANDS__ */
+#endif /* __IIR_EQUALIZER_NBANDS__ */

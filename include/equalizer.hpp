@@ -9,7 +9,7 @@ public:
     Equalizer();
     ~Equalizer();
 
-    GstElement *bin, *id_in, *id_out, *conv;
+    GstElement *bin, *id_in, *id_out;
     std::vector<GstElement*> nodes;
 };
 

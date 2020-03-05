@@ -1,7 +1,7 @@
 #include "biquad.hpp"
 
-static inline double flush_denormal(double d) {
-    return (fabs(d) < DBL_MIN) ? 0 : d;
+static inline float flush_denormal(float d) {
+    return (fabs(d) < FLT_MIN) ? 0 : d;
 }
 
 Biquad::Biquad() {
@@ -20,7 +20,7 @@ Biquad::~Biquad() = default;
 
 double Biquad::process(const float source, uint chan_ix) {
     std::shared_ptr<FilterHistory> fh = history.at(chan_ix);
-    g_print("%d, %f\n", chan_ix, fh->x1);
+    // g_print("%d, %f\n", chan_ix, fh->x1);
     double x = source;
     double x1 = fh->x1;
     double x2 = fh->x2;

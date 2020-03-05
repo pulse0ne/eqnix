@@ -119,9 +119,9 @@ gboolean GstBiquad::setup(GstAudioFilter* audio, const GstAudioInfo* info) {
         case GST_AUDIO_FORMAT_F32:
             b->isdoublewide = false;
             break;
-        case GST_AUDIO_FORMAT_F64:
-            b->isdoublewide = true;
-            break;
+        // case GST_AUDIO_FORMAT_F64:
+        //     b->isdoublewide = true;
+        //     break;
         default:
             return FALSE;
     }

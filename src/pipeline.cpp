@@ -19,17 +19,19 @@ void on_message_error(const GstBus* bus, GstMessage* message, Pipeline* p) {
 }
 
 static void message_handler(GstBus* bus, GstMessage* message, gpointer data) {
-    g_print("element message: %s\n", GST_OBJECT_NAME(message->src));
-    if (std::strcmp(GST_OBJECT_NAME(message->src), "node0") == 0) {
+    if (std::strcmp(GST_OBJECT_NAME(message->src), "eq") == 0) {
+        gdouble b0, b1, b2, a1, a2;
+        guint rate;
         const GstStructure* s = gst_message_get_structure(message);
-        const GValue* magnitudes = gst_structure_get_value(s, "magnitude");
-        guint n_freqs;
-        gst_structure_get_uint(s, "nfreqs", &n_freqs);
+        const GValue* band = gst_structure_get_value(s, "band");
+        gst_structure_get_double(s, "b0", &b0);
+        gst_structure_get_double(s, "b1", &b1);
+        gst_structure_get_double(s, "b2", &b2);
+        gst_structure_get_double(s, "a1", &a1);
+        gst_structure_get_double(s, "a2", &a2);
+        gst_structure_get_uint(s, "rate", &rate);
 
-        for (guint i = 0; i < n_freqs; i++) {
-            g_print("%f ", g_value_get_double(gst_value_list_get_value(magnitudes, i)));
-        }
-        g_print("\n");
+        g_print("%s:\t b0=%7.5f | b1=%7.5f | b2=%7.5f | a1=%7.5f | a2=%7.5f | rate=%d\n", g_value_get_string(band), b0, b1, b2, a1, a2, rate);
     }
 };
 
@@ -55,12 +57,21 @@ Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
 
     equalizer = std::make_shared<Equalizer>();
 
+    capsfilter = ensure_factory_create("capsfilter", "filter");
     source = ensure_factory_create("pulsesrc", "source");
-    converter = ensure_factory_create("audioconvert", "conv");
+    conv_in = ensure_factory_create("audioconvert", "conv_in");
+    // conv_out = ensure_factory_create("audioconvert", "conv_out");
     sink = ensure_factory_create("pulsesink", "sink");
 
-    gst_bin_add_many(GST_BIN(pipeline), source, converter, equalizer->bin, sink, nullptr);
-    gst_element_link_many(source, converter, equalizer->bin, sink, nullptr);
+    // auto sinkpad = gst_element_get_static_pad(sink, "sink");
+    // gst_pad_use_fixed_caps(sinkpad);
+    // GstCaps* caps = gst_caps_from_string(ALLOWED_CAPS);
+    // gst_pad_set_caps(sinkpad, caps);
+    // gst_caps_unref(caps);
+    // g_object_unref(sinkpad);
+
+    gst_bin_add_many(GST_BIN(pipeline), source, capsfilter, conv_in, equalizer->bin, /*conv_out,*/ sink, nullptr);
+    gst_element_link_many(source, capsfilter, conv_in, equalizer->bin, /*conv_out,*/ sink, nullptr);
 
     g_object_set(source, "volume", 1.0, nullptr);
     g_object_set(source, "mute", 0, nullptr);
