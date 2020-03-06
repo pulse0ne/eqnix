@@ -1,5 +1,6 @@
 #include "pipeline.hpp"
 #include "config.h"
+#include "filter_info.hpp"
 
 namespace {
 
@@ -20,6 +21,7 @@ void on_message_error(const GstBus* bus, GstMessage* message, Pipeline* p) {
 
 static void message_handler(GstBus* bus, GstMessage* message, gpointer data) {
     if (std::strcmp(GST_OBJECT_NAME(message->src), "eq") == 0) {
+        Equalizer* eq = static_cast<Equalizer*>(data);
         gdouble b0, b1, b2, a1, a2;
         guint rate;
         const GstStructure* s = gst_message_get_structure(message);
@@ -32,6 +34,9 @@ static void message_handler(GstBus* bus, GstMessage* message, gpointer data) {
         gst_structure_get_uint(s, "rate", &rate);
 
         g_print("%s:\t b0=%7.5f | b1=%7.5f | b2=%7.5f | a1=%7.5f | a2=%7.5f | rate=%d\n", g_value_get_string(band), b0, b1, b2, a1, a2, rate);
+
+        std::shared_ptr<FilterInfo> fc = FilterInfo::from_structure(s);
+        Glib::signal_idle().connect_once([eq, fc = move(fc)] { eq->filter_updated.emit(fc); });
     }
 };
 
@@ -59,19 +64,10 @@ Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
 
     capsfilter = ensure_factory_create("capsfilter", "filter");
     source = ensure_factory_create("pulsesrc", "source");
-    conv_in = ensure_factory_create("audioconvert", "conv_in");
-    // conv_out = ensure_factory_create("audioconvert", "conv_out");
     sink = ensure_factory_create("pulsesink", "sink");
 
-    // auto sinkpad = gst_element_get_static_pad(sink, "sink");
-    // gst_pad_use_fixed_caps(sinkpad);
-    // GstCaps* caps = gst_caps_from_string(ALLOWED_CAPS);
-    // gst_pad_set_caps(sinkpad, caps);
-    // gst_caps_unref(caps);
-    // g_object_unref(sinkpad);
-
-    gst_bin_add_many(GST_BIN(pipeline), source, capsfilter, conv_in, equalizer->bin, /*conv_out,*/ sink, nullptr);
-    gst_element_link_many(source, capsfilter, conv_in, equalizer->bin, /*conv_out,*/ sink, nullptr);
+    gst_bin_add_many(GST_BIN(pipeline), source, capsfilter, /*conv_in,*/ equalizer->bin, /*conv_out,*/ sink, nullptr);
+    gst_element_link_many(source, capsfilter, /*conv_in,*/ equalizer->bin, /*conv_out,*/ sink, nullptr);
 
     g_object_set(source, "volume", 1.0, nullptr);
     g_object_set(source, "mute", 0, nullptr);
@@ -83,7 +79,7 @@ Pipeline::Pipeline(PAManager* pamanager) : pam(pamanager) {
     g_object_set(sink, "mute", 0, nullptr);
     g_object_set(sink, "provide-clock", 1, nullptr);
 
-    g_signal_connect(bus, "message::element", G_CALLBACK(message_handler), nullptr);
+    g_signal_connect(bus, "message::element", G_CALLBACK(message_handler), equalizer.get());
 
     std::string pulse_props = "application.id=com.github.pulse0ne.eqnix.sinkinputs";
     set_pulseaudio_props(pulse_props);

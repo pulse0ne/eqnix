@@ -21,7 +21,7 @@ class Pipeline {
 
     PAManager* pam = nullptr;
 
-    GstElement *pipeline = nullptr, *source = nullptr, *conv_in = nullptr, *conv_out = nullptr, *sink = nullptr;
+    GstElement *pipeline = nullptr, *source = nullptr, *sink = nullptr;
     GstBus* bus = nullptr;
 
     std::shared_ptr<Equalizer> equalizer;

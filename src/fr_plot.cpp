@@ -1,62 +1,28 @@
 #include "fr_plot.hpp"
+#include <algorithm>
 #include <cmath>
+#include <complex>
 #include <iomanip>
-
-// namespace {
-//     gboolean on_spectrum_message(GstBus* bus, GstMessage* msg, gpointer data) {
-//         if (msg->type == GstMessageType::GST_MESSAGE_ELEMENT) {
-//             FrequencyResponsePlot* fr = static_cast<FrequencyResponsePlot*>(data);
-//             const GstStructure* s = gst_message_get_structure(msg);
-//             const std::string name = gst_structure_get_name(s);
-
-//             if (name == "spectrum") {
-//                 const GValue *magnitudes, *mag;
-//                 magnitudes = gst_structure_get_value(s, "magnitude");
-//                 g_print("[");
-//                 for (auto i = 0; i < 20; i++) {
-//                     mag = gst_value_list_get_value(magnitudes, i);
-//                     float fmag = g_value_get_float(mag);
-//                     g_print(" %f ", fmag);
-//                 }
-//                 g_print("]\n");
-//             }
-//         }
-//         return true;
-//     }
-// }
+#include "util.hpp"
 
 FrequencyResponsePlot::FrequencyResponsePlot(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& builder, Colormap _colors, std::shared_ptr<Equalizer> _equalizer)
     : Gtk::DrawingArea(cobject), nyquist(22050.0), start_freq(10.0), equalizer(_equalizer), colors(_colors) {
     add_events(Gdk::BUTTON_PRESS_MASK);
 
-    // pipeline = gst_pipeline_new("fr-pipeline");
-    // // src = gst_element_factory_make("fakesrc", "fr-src");
-    // src = gst_element_factory_make("audiotestsrc", "fr-src");
-    // spectrum = gst_element_factory_make("spectrum", "fr-spectrum");
-    // sink = gst_element_factory_make("fakesink", "fr-sink");
-
-    // bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-    // gst_bus_add_watch(bus, on_spectrum_message, this);
-
-    // gst_bin_add_many(GST_BIN(pipeline), src, equalizer->fr_eq, spectrum, sink, nullptr);
-    // gst_element_link_many(src, equalizer->fr_eq, spectrum, sink, nullptr);
-
-    // g_object_set(src, "wave", 5, "volume", 0.1, nullptr);
-    // // g_object_set(src, "filltype", 4, "pattern", "1", "sizetype", 1, "sync", 1, nullptr);
-    // g_object_set(spectrum, "interval", 1000000000, "bands", 20, "post-messages", 1, "threshold", -120, nullptr);
-    // g_object_set(sink, "sync", 1, nullptr);
-
-    // gst_element_set_state(pipeline, GstState::GST_STATE_PLAYING);
+    equalizer->filter_updated.connect(sigc::mem_fun(*this, &FrequencyResponsePlot::handle_coefficient_update));
 }
 
 FrequencyResponsePlot::~FrequencyResponsePlot() {
-    // gst_element_set_state(pipeline, GstState::GST_STATE_NULL);
-
-    // gst_object_unref(bus);
-    // gst_object_unref(pipeline);
+    //
 }
 
-bool FrequencyResponsePlot::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
+void FrequencyResponsePlot::handle_coefficient_update(std::shared_ptr<FilterInfo> update) {
+    g_print("%s coefficients updated\n", update->band.c_str());
+    coefficients.insert_or_assign(update->band, update);
+    queue_draw();
+}
+
+bool FrequencyResponsePlot::on_draw(const CairoCtx& cr) {
     Gtk::Allocation allocation = get_allocation();
     const int w = allocation.get_width();
     const int h = allocation.get_height();
@@ -67,6 +33,8 @@ bool FrequencyResponsePlot::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
     cr->select_font_face("Sans", Cairo::FONT_SLANT_NORMAL, Cairo::FONT_WEIGHT_NORMAL);
     cr->set_font_size(9.0);
     draw_grid(w, h, cr);
+    auto yvals = draw_lines(w, h, cr);
+    draw_handles(w, h, yvals, cr);
 
     // auto& [ar, ag, ab] = colors["accent"];
     // cr->set_source_rgb(ar, ag, ab);
@@ -77,7 +45,7 @@ bool FrequencyResponsePlot::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
     return true;
 }
 
-void FrequencyResponsePlot::draw_grid(int w, int h, const Cairo::RefPtr<Cairo::Context>& cr) {
+void FrequencyResponsePlot::draw_grid(int w, int h, const CairoCtx& cr) {
     auto line_range = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     Gdk::RGBA c, b;
     c = colors["background"];
@@ -131,5 +99,97 @@ void FrequencyResponsePlot::draw_grid(int w, int h, const Cairo::RefPtr<Cairo::C
         cr->move_to(6.5, y - 1.5);
         cr->set_source_rgb(1, 1, 1); // white
         cr->show_text(s.str());
+    }
+}
+
+std::vector<float> FrequencyResponsePlot::draw_lines(int w, int h, const CairoCtx& cr) {
+    if (coefficients.empty()) {
+        return std::vector<float>{};
+    }
+
+    g_print("here");
+    const float freq_sart = 10.0;
+
+    std::vector<float> freqs(w);
+    std::vector<float> mag_res(w);
+    std::vector<float> yvals(w);
+
+    auto rate = coefficients["band0"]->rate; // TODO: find a better way to get this
+    auto m = static_cast<float>(w) / log10((rate / 2.0) / freq_sart);
+
+    for (auto i = 0; i < w; ++i) {
+        freqs[i] = pow(10.0, (i / m)) * freq_sart;
+        mag_res[i] = 1.0;
+    }
+
+    auto e = colors["fr-line"];
+    cr->set_source_rgba(e.get_red(), e.get_green(), e.get_blue(), 0.5);
+    cr->set_line_width(0.75);
+
+    for (auto pair : coefficients) {
+        auto coeff = pair.second;
+        auto b0 = coeff->b0;
+        auto b1 = coeff->b1;
+        auto b2 = coeff->b2;
+        auto a1 = coeff->a1;
+        auto a2 = coeff->a2;
+
+        for (auto i = 0; i < w; ++i) {
+            double f = freqs[i];
+            double omega = util::calculate_omega(f, rate);
+            std::complex<double> z = std::complex(cos(omega), sin(omega));
+            std::complex<double> numer = b0 + (b1 + b2*z) * z;
+            std::complex<double> denom = std::complex<double>(1, 0) + (a1 + a2*z) * z;
+            float res = static_cast<float>(fabs(numer / denom));
+            mag_res[i] *= res;
+
+            auto db_res = 20.0 * log10(res);
+            auto y = (0.5 * h) * (1 - db_res / 20.0);
+            if (i == 0) {
+                cr->move_to(i, y);
+            } else {
+                cr->line_to(i, y);
+            }
+        }
+        cr->stroke();
+    }
+
+    auto c = colors["fr-line"];
+    cr->set_source_rgb(c.get_red(), c.get_green(), c.get_blue());
+    cr->set_line_width(2.0);
+    for (auto x = 0; x < w; ++x) {
+        auto res = mag_res[x];
+        auto db_response = 20.0 * log10(res);
+        auto y = (0.5 * h) * (1 - db_response / 20.0);
+        if (x == 0) {
+            cr->move_to(x, y);
+        } else {
+            cr->line_to(x, y);
+        }
+        yvals[x] = y;
+    }
+    cr->stroke();
+
+    return yvals;
+}
+
+void FrequencyResponsePlot::draw_handles(int w, int h, std::vector<float> yvals, const CairoCtx& cr) {
+    if (yvals.empty()) {
+        return;
+    }
+
+    float freq_start = 10.0;
+    auto rate = coefficients["band0"]->rate;
+    auto m = static_cast<float>(w) / log10((rate / 2.0) / freq_start);
+    for (auto pair : coefficients) {
+        auto f = pair.second;
+        auto x = floorf(m * log10(f->freq / freq_start));
+        auto y = std::min(h + 10.0f, std::max(10.0f, yvals[x])) - 10;
+
+        auto c = colors["accent"];
+        cr->set_source_rgb(c.get_red(), c.get_green(), c.get_blue());
+        cr->set_line_width(2.0);
+        cr->arc(x, y, 8.0, 0, 2 * M_PI);
+        cr->stroke();
     }
 }

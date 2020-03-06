@@ -6,9 +6,11 @@
 #include <cairomm/cairomm.h>
 #include <map>
 #include <memory>
+#include <vector>
 #include "equalizer.hpp"
 
 using Colormap = std::map<std::string, Gdk::RGBA>;
+using CairoCtx = Cairo::RefPtr<Cairo::Context>;
 
 class FrequencyResponsePlot : public Gtk::DrawingArea {
 public:
@@ -23,6 +25,8 @@ public:
     GstElement *pipeline, *src, *spectrum, *sink;
     GstBus *bus;
 
+    void handle_coefficient_update(std::shared_ptr<FilterInfo> update);
+
 private:
     std::map<std::string, const double> freq_text = {
         {"100", 100.0},
@@ -32,8 +36,12 @@ private:
 
     Colormap colors;
 
-    bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr) override;
-    void draw_grid(int w, int h, const Cairo::RefPtr<Cairo::Context>& cr);
+    std::map<std::string, std::shared_ptr<FilterInfo>> coefficients;
+
+    bool on_draw(const CairoCtx& cr) override;
+    void draw_grid(int w, int h, const CairoCtx& cr);
+    std::vector<float> draw_lines(int w, int h, const CairoCtx& cr);
+    void draw_handles(int w, int h, std::vector<float> yvals, const CairoCtx& cr);
 };
 
 #endif // FR_PLOT_HPP

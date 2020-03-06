@@ -141,8 +141,17 @@ gboolean ms_to_ns(GValue* value, GVariant* variant, gpointer user_data) {
   return true;
 }
 
-std::tuple<double, double, double> rgb1_from_rgb255(int r, int g, int b) {
-  return std::make_tuple((double)r / 255.0, (double)g / 255.0, (double)b / 255.0);
+gdouble calculate_omega(gdouble freq, gint rate) {
+    gdouble omega;
+
+    if (freq / rate >= 0.5)
+        omega = G_PI;
+    else if (freq <= 0.0)
+        omega = 0.0;
+    else
+        omega = 2.0 * G_PI * (freq / rate);
+
+    return omega;
 }
 
 }  // namespace util

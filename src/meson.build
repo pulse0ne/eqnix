@@ -8,6 +8,7 @@ eqnix_sources = [
     'pa_manager.cpp',
     'pipeline.cpp',
     'equalizer.cpp',
+    'filter_info.cpp',
     gresources
 ]
 

@@ -40,9 +40,7 @@ gboolean double_x10_to_int(GValue* value, GVariant* variant, gpointer user_data)
 
 gboolean ms_to_ns(GValue* value, GVariant* variant, gpointer user_data);
 
-std::tuple<double, double, double> rgb1_from_rgb255(int r, int g, int b);
-
-static std::map<std::string, std::tuple<double, double, double>> colormap;
+gdouble calculate_omega(gdouble freq, gint rate);
 
 void print_thread_id();
 

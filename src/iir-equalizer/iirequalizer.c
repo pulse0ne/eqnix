@@ -407,11 +407,6 @@ static void setup_peak_filter(IirEqualizer* equ, IirEqualizerBand* band) {
 
         a0 = (1.0 + alpha2);
 
-        // band->a0 = (1.0 + alpha1) / b0;
-        // band->a1 = (-2.0 * cos(omega)) / b0;
-        // band->a2 = (1.0 - alpha1) / b0;
-        // band->b1 = (2.0 * cos(omega)) / b0;
-        // band->b2 = -(1.0 - alpha2) / b0;
         band->b0 = (1 + alpha1) / a0;
         band->b1 = (-2 * cos(omega)) / a0;
         band->b2 = (1 - alpha1) / a0;
@@ -422,20 +417,6 @@ static void setup_peak_filter(IirEqualizer* equ, IirEqualizerBand* band) {
         GST_INFO("rate = %d, gain = %5.1f, width= %7.2f, freq = %7.2f, alpha = %7.5f, b0 = %7.5g, b1 = %7.5g, b2 = %7.5g, a1 = %7.5g, a2 = %7.5g",
             rate, band->gain, band->width, band->freq, alpha, band->b0, band->b1, band->b2, band->a1, band->a2);
     }
-
-    // guint i = 10;
-    // float* mags = g_malloc_n(10, sizeof(i));
-    // iir_equalizer_frequency_response(equ, i, mags);
-    // guint j = 0;
-    // for(; j < i; j++) {
-    //     // let dbResponse = 20.0 * Math.log10(Math.abs(response));
-    //     float a = fabsf(mags[j]);
-    //     if (a == 0.0f) a = 1.0f;
-    //     float r = 20.0f * log10f(a);
-    //     g_print("  %f  ", mags[j]); //r);
-    // }
-    // g_print("\n");
-    // g_free(mags);
 }
 
 static void setup_low_shelf_filter(IirEqualizer* equ, IirEqualizerBand* band) {
@@ -543,9 +524,13 @@ static void post_coefficient_change_message(IirEqualizer* eq, IirEqualizerBand* 
 
     rate = GST_AUDIO_FILTER_RATE(eq);
 
-    s = gst_structure_new("band-coefficients",
+    s = gst_structure_new("band-info",
         "band", G_TYPE_STRING, g_value_get_string(&name),
         "rate", G_TYPE_UINT, rate,
+        "freq", G_TYPE_DOUBLE, band->freq,
+        "type", G_TYPE_INT, band->type,
+        "gain", G_TYPE_DOUBLE, band->gain,
+        "q", G_TYPE_DOUBLE, band->width,
         "b0", G_TYPE_DOUBLE, band->b0,
         "b1", G_TYPE_DOUBLE, band->b1,
         "b2", G_TYPE_DOUBLE, band->b2,

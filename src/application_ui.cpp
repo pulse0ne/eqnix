@@ -5,10 +5,11 @@ ApplicationUI::ApplicationUI(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Bu
     : Gtk::ApplicationWindow(cobject), app(application) {
     util::debug("in ApplicationUI constructor");
     colors = {
-        {"background", Gdk::RGBA("rgb(33,39,44)")},
-        {"accent", Gdk::RGBA("rgb(255,195,14)")},
-        {"grid-lines", Gdk::RGBA("rgb(64,64,64)")},
-        {"grid-lines-bright", Gdk::RGBA("rgb(92,92,92)")}
+        {"background",        Gdk::RGBA("rgb( 33,  39,  44)")},
+        {"accent",            Gdk::RGBA("rgb(255, 195,  14)")},
+        {"fr-line",           Gdk::RGBA("rgb(  9, 184, 240)")},
+        {"grid-lines",        Gdk::RGBA("rgb( 64,  64,  64)")},
+        {"grid-lines-bright", Gdk::RGBA("rgb( 92,  92,  92)")}
     };
     builder->get_widget_derived("drawing_area", fr_plot, colors, application->pipeline->get_equalizer());
     util::debug("initialized widget");
