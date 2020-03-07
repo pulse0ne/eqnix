@@ -13,9 +13,9 @@ Equalizer::Equalizer() {
     g_object_set(bin, "num-bands", 6, nullptr);
 
     GObject* band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 0);
-    g_object_set(band, "freq", 20.0, "gain", +12.0, "bandwidth", 50.0, "type", 0, nullptr);
+    g_object_set(band, "freq", 20.0, "gain", +8.0, "bandwidth", 50.0, "type", 0, nullptr);
     band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 1);
-    g_object_set(band, "freq", 40.0, "gain", +9.0, "bandwidth", 100.0, "type", 0, nullptr);
+    g_object_set(band, "freq", 40.0, "gain", +6.0, "bandwidth", 100.0, "type", 0, nullptr);
     band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 2);
     g_object_set(band, "freq", 100.0, "gain", -7.0, "bandwidth", 100.0, "type", 0, nullptr);
     band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 3);

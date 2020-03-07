@@ -19,28 +19,23 @@ FrequencyResponsePlot::~FrequencyResponsePlot() {
 void FrequencyResponsePlot::handle_coefficient_update(std::shared_ptr<FilterInfo> update) {
     g_print("%s coefficients updated\n", update->band.c_str());
     coefficients.insert_or_assign(update->band, update);
+    if (samplerate != update->rate) {
+        samplerate = update->rate;
+    }
     queue_draw();
 }
 
 bool FrequencyResponsePlot::on_draw(const CairoCtx& cr) {
+    g_print("drawing\n");
     Gtk::Allocation allocation = get_allocation();
     const int w = allocation.get_width();
     const int h = allocation.get_height();
-
-    // TODO; temporarily disabled for testing
-    // g_object_set(spectrum, "bands", w, nullptr);
 
     cr->select_font_face("Sans", Cairo::FONT_SLANT_NORMAL, Cairo::FONT_WEIGHT_NORMAL);
     cr->set_font_size(9.0);
     draw_grid(w, h, cr);
     auto yvals = draw_lines(w, h, cr);
     draw_handles(w, h, yvals, cr);
-
-    // auto& [ar, ag, ab] = colors["accent"];
-    // cr->set_source_rgb(ar, ag, ab);
-
-    // cr->arc(w / 2, h / 2, 8, 0, 2 * M_PI);
-    // cr->fill();
 
     return true;
 }
@@ -104,18 +99,22 @@ void FrequencyResponsePlot::draw_grid(int w, int h, const CairoCtx& cr) {
 
 std::vector<float> FrequencyResponsePlot::draw_lines(int w, int h, const CairoCtx& cr) {
     if (coefficients.empty()) {
+        auto c = colors["fr-line"];
+        cr->set_source_rgb(c.get_red(), c.get_green(), c.get_blue());
+        cr->set_line_width(2.0);
+        cr->move_to(0.0, h * 0.5);
+        cr->line_to(w, h * 0.5);
+        cr->stroke();
         return std::vector<float>{};
     }
 
-    g_print("here");
     const float freq_sart = 10.0;
 
     std::vector<float> freqs(w);
     std::vector<float> mag_res(w);
     std::vector<float> yvals(w);
 
-    auto rate = coefficients["band0"]->rate; // TODO: find a better way to get this
-    auto m = static_cast<float>(w) / log10((rate / 2.0) / freq_sart);
+    auto m = static_cast<float>(w) / log10((samplerate / 2.0) / freq_sart);
 
     for (auto i = 0; i < w; ++i) {
         freqs[i] = pow(10.0, (i / m)) * freq_sart;
@@ -123,8 +122,8 @@ std::vector<float> FrequencyResponsePlot::draw_lines(int w, int h, const CairoCt
     }
 
     auto e = colors["fr-line"];
-    cr->set_source_rgba(e.get_red(), e.get_green(), e.get_blue(), 0.5);
-    cr->set_line_width(0.75);
+    cr->set_source_rgba(e.get_red(), e.get_green() + 0.03, e.get_blue(), 0.5);
+    cr->set_line_width(1.0);
 
     for (auto pair : coefficients) {
         auto coeff = pair.second;
@@ -136,7 +135,7 @@ std::vector<float> FrequencyResponsePlot::draw_lines(int w, int h, const CairoCt
 
         for (auto i = 0; i < w; ++i) {
             double f = freqs[i];
-            double omega = util::calculate_omega(f, rate);
+            double omega = util::calculate_omega(f, samplerate);
             std::complex<double> z = std::complex(cos(omega), sin(omega));
             std::complex<double> numer = b0 + (b1 + b2*z) * z;
             std::complex<double> denom = std::complex<double>(1, 0) + (a1 + a2*z) * z;
@@ -179,8 +178,7 @@ void FrequencyResponsePlot::draw_handles(int w, int h, std::vector<float> yvals,
     }
 
     float freq_start = 10.0;
-    auto rate = coefficients["band0"]->rate;
-    auto m = static_cast<float>(w) / log10((rate / 2.0) / freq_start);
+    auto m = static_cast<float>(w) / log10((samplerate / 2.0) / freq_start);
     for (auto pair : coefficients) {
         auto f = pair.second;
         auto x = floorf(m * log10(f->freq / freq_start));

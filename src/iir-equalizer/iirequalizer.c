@@ -96,8 +96,6 @@ struct _IirEqualizerBand {
     IirEqualizerBandType type;
 
     /* second order iir filter */
-    // gdouble b1, b2;     // IIR coefficients for outputs
-    // gdouble a0, a1, a2; // IIR coefficients for inputs
     gdouble b0, b1, b2;
     gdouble a1, a2;
 };
@@ -369,11 +367,6 @@ static gdouble calculate_bw(IirEqualizerBand* band, gint rate) {
          * below would create coefficients that for some reason amplify
          * the band.
          */
-        // band->a0 = 1.0;
-        // band->a1 = 0.0;
-        // band->a2 = 0.0;
-        // band->b1 = 0.0;
-        // band->b2 = 0.0;
         band->b0 = 1.0;
         band->b1 = 0.0;
         band->b2 = 0.0;
@@ -442,12 +435,6 @@ static void setup_low_shelf_filter(IirEqualizer* equ, IirEqualizerBand* band) {
         delta = 2.0 * sqrt(gain) * alpha;
         a0 = egp + egm * cos(omega) + delta;
 
-        // band->a0 = ((egp - egm * cos(omega) + delta) * gain) / b0;
-        // band->a1 = ((egm - egp * cos(omega)) * 2.0 * gain) / b0;
-        // band->a2 = ((egp - egm * cos(omega) - delta) * gain) / b0;
-        // band->b1 = ((egm + egp * cos(omega)) * 2.0) / b0;
-        // band->b2 = -((egp + egm * cos(omega) - delta)) / b0;
-
         band->b0 = ((egp - egm * cos(omega) + delta) * gain) / a0;
         band->b1 = ((egm - egp * cos(omega)) * 2.0 * gain) / a0;
         band->b2 = ((egp - egm * cos(omega) - delta) * gain) / a0;
@@ -483,11 +470,6 @@ static void setup_high_shelf_filter(IirEqualizer* equ, IirEqualizerBand* band) {
         delta = 2.0 * sqrt(gain) * alpha;
         a0 = egp - egm * cos(omega) + delta;
 
-        // band->a0 = ((egp + egm * cos(omega) + delta) * gain) / b0;
-        // band->a1 = ((egm + egp * cos(omega)) * -2.0 * gain) / b0;
-        // band->a2 = ((egp + egm * cos(omega) - delta) * gain) / b0;
-        // band->b1 = ((egm - egp * cos(omega)) * -2.0) / b0;
-        // band->b2 = -((egp - egm * cos(omega) - delta)) / b0;
         band->b0 = ((egp + egm * cos(omega) + delta) * gain) / a0;
         band->b1 = ((egm + egp * cos(omega)) * -2.0 * gain) / a0;
         band->b2 = ((egp + egm * cos(omega) - delta) * gain) / a0;

@@ -35,8 +35,8 @@ private:
     };
 
     Colormap colors;
-
     std::map<std::string, std::shared_ptr<FilterInfo>> coefficients;
+    uint samplerate = 44100;
 
     bool on_draw(const CairoCtx& cr) override;
     void draw_grid(int w, int h, const CairoCtx& cr);
