@@ -34,8 +34,8 @@ bool FrequencyResponsePlot::on_draw(const CairoCtx& cr) {
     cr->select_font_face("Sans", Cairo::FONT_SLANT_NORMAL, Cairo::FONT_WEIGHT_NORMAL);
     cr->set_font_size(9.0);
     draw_grid(w, h, cr);
-    auto yvals = draw_lines(w, h, cr);
-    draw_handles(w, h, yvals, cr);
+    draw_lines(w, h, cr);
+    draw_handles(w, h, cr);
 
     return true;
 }
@@ -97,7 +97,15 @@ void FrequencyResponsePlot::draw_grid(int w, int h, const CairoCtx& cr) {
     }
 }
 
-std::vector<float> FrequencyResponsePlot::draw_lines(int w, int h, const CairoCtx& cr) {
+static inline float frequency_response(float freq, uint samplerate, gdouble b0, gdouble b1, gdouble b2, gdouble a1, gdouble a2) {
+    double omega = util::calculate_omega(freq, samplerate);
+    std::complex<double> z = std::complex(cos(omega), sin(omega));
+    std::complex<double> numer = b0 + (b1 + b2*z) * z;
+    std::complex<double> denom = std::complex<double>(1, 0) + (a1 + a2*z) * z;
+    return static_cast<float>(fabs(numer / denom));
+}
+
+void FrequencyResponsePlot::draw_lines(int w, int h, const CairoCtx& cr) {
     if (coefficients.empty()) {
         auto c = colors["fr-line"];
         cr->set_source_rgb(c.get_red(), c.get_green(), c.get_blue());
@@ -105,14 +113,13 @@ std::vector<float> FrequencyResponsePlot::draw_lines(int w, int h, const CairoCt
         cr->move_to(0.0, h * 0.5);
         cr->line_to(w, h * 0.5);
         cr->stroke();
-        return std::vector<float>{};
+        return;
     }
 
     const float freq_sart = 10.0;
 
     std::vector<float> freqs(w);
     std::vector<float> mag_res(w);
-    std::vector<float> yvals(w);
 
     auto m = static_cast<float>(w) / log10((samplerate / 2.0) / freq_sart);
 
@@ -135,11 +142,7 @@ std::vector<float> FrequencyResponsePlot::draw_lines(int w, int h, const CairoCt
 
         for (auto i = 0; i < w; ++i) {
             double f = freqs[i];
-            double omega = util::calculate_omega(f, samplerate);
-            std::complex<double> z = std::complex(cos(omega), sin(omega));
-            std::complex<double> numer = b0 + (b1 + b2*z) * z;
-            std::complex<double> denom = std::complex<double>(1, 0) + (a1 + a2*z) * z;
-            float res = static_cast<float>(fabs(numer / denom));
+            float res = frequency_response(f, samplerate, b0, b1, b2, a1, a2);
             mag_res[i] *= res;
 
             auto db_res = 20.0 * log10(res);
@@ -165,15 +168,12 @@ std::vector<float> FrequencyResponsePlot::draw_lines(int w, int h, const CairoCt
         } else {
             cr->line_to(x, y);
         }
-        yvals[x] = y;
     }
     cr->stroke();
-
-    return yvals;
 }
 
-void FrequencyResponsePlot::draw_handles(int w, int h, std::vector<float> yvals, const CairoCtx& cr) {
-    if (yvals.empty()) {
+void FrequencyResponsePlot::draw_handles(int w, int h, const CairoCtx& cr) {
+    if (coefficients.empty()) {
         return;
     }
 
@@ -182,7 +182,9 @@ void FrequencyResponsePlot::draw_handles(int w, int h, std::vector<float> yvals,
     for (auto pair : coefficients) {
         auto f = pair.second;
         auto x = floorf(m * log10(f->freq / freq_start));
-        auto y = std::min(h + 10.0f, std::max(10.0f, yvals[x])) - 10;
+        auto res = frequency_response(f->freq, samplerate, f->b0, f->b1, f->b2, f->a1, f->a2);
+        float y = (0.5 * h) * (1 - log10(res));
+        y = std::min(h + 10.0f, std::max(10.0f, y)) - 10;
 
         auto c = colors["accent"];
         cr->set_source_rgb(c.get_red(), c.get_green(), c.get_blue());

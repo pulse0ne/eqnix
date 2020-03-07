@@ -177,7 +177,7 @@ auto Pipeline::apps_want_to_play() -> bool {
 }
 
 void Pipeline::update_pipeline_state() {
-    bool wants_to_play = apps_want_to_play();
+    bool wants_to_play = true;//apps_want_to_play();
     GstState state;
     GstState pending;
     gst_element_get_state(pipeline, &state, &pending, state_check_timeout);
