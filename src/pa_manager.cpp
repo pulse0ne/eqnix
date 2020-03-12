@@ -14,7 +14,6 @@ PAManager::PAManager() : main_loop(pa_threaded_mainloop_new()), main_loop_api(pa
     if (context_ready) {
         get_server_info();
         load_apps_sink();
-        // load_mic_sink();
         subscribe_to_events();
     } else {
         logger.error("context initialization failed");

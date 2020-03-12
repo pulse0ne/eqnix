@@ -28,8 +28,19 @@ Equalizer::Equalizer() {
     auto s = gst_structure_new_empty("filter-query");
     auto ev = gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM, s); // takes ownership of s
     gst_element_send_event(bin, ev); // takes ownership of ev
+
+    filter_changed.connect(sigc::mem_fun(*this, &Equalizer::handle_filter_change));
 }
 
 Equalizer::~Equalizer() {
     // TODO cleanup
+}
+
+void Equalizer::handle_filter_change(std::shared_ptr<FilterInfo> f) {
+    GObject* band = gst_child_proxy_get_child_by_name(GST_CHILD_PROXY(bin), f->band.c_str());
+    if (band) {
+        g_object_set(band, "freq", f->freq, "gain", f->gain, "bandwidth", f->q, "type", f->filtertype, nullptr);
+    } else {
+        //
+    }
 }

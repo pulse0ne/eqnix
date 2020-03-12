@@ -22,18 +22,18 @@ void on_message_error(const GstBus* bus, GstMessage* message, Pipeline* p) {
 static void message_handler(GstBus* bus, GstMessage* message, gpointer data) {
     if (std::strcmp(GST_OBJECT_NAME(message->src), "eq") == 0) {
         Equalizer* eq = static_cast<Equalizer*>(data);
-        gdouble b0, b1, b2, a1, a2;
-        guint rate;
+        // gdouble b0, b1, b2, a1, a2;
+        // guint rate;
         const GstStructure* s = gst_message_get_structure(message);
-        const GValue* band = gst_structure_get_value(s, "band");
-        gst_structure_get_double(s, "b0", &b0);
-        gst_structure_get_double(s, "b1", &b1);
-        gst_structure_get_double(s, "b2", &b2);
-        gst_structure_get_double(s, "a1", &a1);
-        gst_structure_get_double(s, "a2", &a2);
-        gst_structure_get_uint(s, "rate", &rate);
+        // const GValue* band = gst_structure_get_value(s, "band");
+        // gst_structure_get_double(s, "b0", &b0);
+        // gst_structure_get_double(s, "b1", &b1);
+        // gst_structure_get_double(s, "b2", &b2);
+        // gst_structure_get_double(s, "a1", &a1);
+        // gst_structure_get_double(s, "a2", &a2);
+        // gst_structure_get_uint(s, "rate", &rate);
 
-        g_print("%s:\t b0=%7.5f | b1=%7.5f | b2=%7.5f | a1=%7.5f | a2=%7.5f | rate=%d\n", g_value_get_string(band), b0, b1, b2, a1, a2, rate);
+        // g_print("%s:\t b0=%7.5f | b1=%7.5f | b2=%7.5f | a1=%7.5f | a2=%7.5f | rate=%d\n", g_value_get_string(band), b0, b1, b2, a1, a2, rate);
 
         std::shared_ptr<FilterInfo> fc = FilterInfo::from_structure(s);
         Glib::signal_idle().connect_once([eq, fc = move(fc)] { eq->filter_updated.emit(fc); });

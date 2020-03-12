@@ -32,6 +32,4 @@ executable(
     native: true
 )
 
-# subdir('biquad')
 subdir('iir-equalizer')
-# subdir('para-eq')

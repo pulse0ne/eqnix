@@ -299,8 +299,7 @@ static void iir_equalizer_class_init(IirEqualizerClass* klass) {
     gst_caps_unref(caps);
 }
 
-static gboolean handle_event(GstPad* pad, GstObject* parent, GstEvent* event) {
-    g_print("EVENT\n");
+static gboolean iir_equalizer_handle_event(GstPad* pad, GstObject* parent, GstEvent* event) {
     if (GST_EVENT_TYPE(event) == GST_EVENT_CUSTOM_DOWNSTREAM) {
         const GstStructure* s = gst_event_get_structure(event);
         if (strcmp(g_quark_to_string(s->name), "filter-query") == 0) {
@@ -323,7 +322,7 @@ static void iir_equalizer_init(IirEqualizer* eq) {
     gst_base_transform_set_passthrough(GST_BASE_TRANSFORM(eq), TRUE);
     GstElement* el = GST_ELEMENT(eq);
     GstPad* pad = gst_element_get_static_pad(el, "src");
-    pad->eventfunc = handle_event;
+    pad->eventfunc = iir_equalizer_handle_event;
 }
 
 static void iir_equalizer_finalize(GObject* object) {

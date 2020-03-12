@@ -8,9 +8,6 @@ Application::Application() : Gtk::Application("com.github.pulse0ne.eqnix") {
     Glib::setenv("PULSE_PROP_application.id", "com.github.pulse0ne.eqnix");
     Glib::setenv("PULSE_PROP_application.icon_name", "com.github.pulse0ne.eqnix");
     logger.debug("in Application constructor");
-
-    pam = std::make_unique<PAManager>();
-    pipeline = std::make_unique<Pipeline>(pam.get()); // TODO this seems suspect
 }
 
 Application::~Application() {}
@@ -39,14 +36,13 @@ void Application::on_activate() {
         window->show_all();
 
         pam->find_sink_inputs();
-        // pam->find_source_outputs();
         pam->find_sinks();
-        // pam->find_sources();
     }
 }
 
 void Application::on_startup() {
     Gtk::Application::on_startup();
 
-    // pm = std::make_unique<PulseManager>();
+    pam = std::make_unique<PAManager>();
+    pipeline = std::make_unique<Pipeline>(pam.get()); // TODO this seems suspect
 }

@@ -2,7 +2,9 @@
 
 namespace logging {
 
-EqnixLogger::EqnixLogger(std::string name) : logname(name) {}
+EqnixLogger::EqnixLogger(std::string name) : logname(name) {
+    //
+}
 
 EqnixLogger::~EqnixLogger() {}
 

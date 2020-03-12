@@ -15,6 +15,10 @@ public:
     std::vector<GstElement*> nodes;
 
     sigc::signal<void, std::shared_ptr<FilterInfo>> filter_updated;
+    sigc::signal<void, std::shared_ptr<FilterInfo>> filter_changed;
+
+private:
+    void handle_filter_change(std::shared_ptr<FilterInfo> f);
 };
 
 #endif // EQUALIZER_HPP
