@@ -3,44 +3,48 @@
 
 #include <cstring>
 
+#define NUM_BANDS 8
 
 Equalizer::Equalizer() {
     bin = gst_element_factory_make("iirequalizer", "eq");
     if (!bin) {
-        throw std::runtime_error("nope");
+        throw std::runtime_error("nope"); // TODO
     }
 
-    g_object_set(bin, "num-bands", 6, nullptr);
+    g_object_set(bin, "num-bands", NUM_BANDS, nullptr);
 
-    GObject* band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 0);
-    g_object_set(band, "freq", 20.0, "gain", +8.0, "bandwidth", 50.0, "type", 0, nullptr);
-    band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 1);
-    g_object_set(band, "freq", 40.0, "gain", +6.0, "bandwidth", 100.0, "type", 0, nullptr);
-    band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 2);
-    g_object_set(band, "freq", 100.0, "gain", -7.0, "bandwidth", 100.0, "type", 0, nullptr);
-    band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 3);
-    g_object_set(band, "freq", 450.0, "gain", -6.0, "bandwidth", 250.0, "type", 0, nullptr);
-    band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 4);
-    g_object_set(band, "freq", 1750.0, "gain", +1.0, "bandwidth", 500.0, "type", 0, nullptr);
-    band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), 5);
-    g_object_set(band, "freq", 10000.0, "gain", +5.0, "bandwidth", 5000.0, "type", 0, nullptr);
+    // TODO: replace below with saved settings
+    for (auto i = 0; i < NUM_BANDS; ++i) {
+        GObject* band = gst_child_proxy_get_child_by_index(GST_CHILD_PROXY(bin), i);
+        if (band) {
+            g_object_set(band, "gain", 0.0, "q", 1.0, nullptr);
+        }
+    }
 
-    auto s = gst_structure_new_empty("filter-query");
-    auto ev = gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM, s); // takes ownership of s
-    gst_element_send_event(bin, ev); // takes ownership of ev
-
-    filter_changed.connect(sigc::mem_fun(*this, &Equalizer::handle_filter_change));
+    change_filter.connect(sigc::mem_fun(*this, &Equalizer::handle_change_filter));
 }
 
 Equalizer::~Equalizer() {
     // TODO cleanup
 }
 
-void Equalizer::handle_filter_change(std::shared_ptr<FilterInfo> f) {
-    GObject* band = gst_child_proxy_get_child_by_name(GST_CHILD_PROXY(bin), f->band.c_str());
+void Equalizer::handle_change_filter(std::string name, FilterChangeType change_type, const GValue* value) {
+    GObject* band = gst_child_proxy_get_child_by_name(GST_CHILD_PROXY(bin), name.c_str());
     if (band) {
-        g_object_set(band, "freq", f->freq, "gain", f->gain, "bandwidth", f->q, "type", f->filtertype, nullptr);
-    } else {
-        //
+        if (change_type == FilterChangeType::TYPE) {
+            uint type = g_value_get_uint(value);
+            g_object_set(band, "type", type, nullptr);
+        } else {
+            std::string prop;
+            double val = g_value_get_double(value);
+            switch(change_type) {
+            case Q: prop = "q"; break;
+            case FREQ: prop = "freq"; break;
+            case GAIN: prop = "gain"; break;
+            default:
+                return;
+            }
+            g_object_set(band, prop.c_str(), val, nullptr);
+        }
     }
 }

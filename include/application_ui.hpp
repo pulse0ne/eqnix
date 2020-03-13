@@ -19,7 +19,6 @@ private:
     Application* app;
     std::map<std::string, Gdk::RGBA> colors;
     FrequencyResponsePlot* fr_plot;
-    std::vector<sigc::connection> connections;
     logging::EqnixLogger logger = logging::EqnixLogger::create("ApplicationUI");
 };
 

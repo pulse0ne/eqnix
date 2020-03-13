@@ -12,7 +12,7 @@
 
 FrequencyResponsePlot::FrequencyResponsePlot(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& builder, Colormap _colors, std::shared_ptr<Equalizer> _equalizer)
     : Gtk::DrawingArea(cobject), start_freq(10.0), equalizer(_equalizer), colors(_colors) {
-    add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK | Gdk::SCROLL_MASK);
+    add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK | Gdk::SCROLL_MASK | Gdk::POINTER_MOTION_MASK);
 
     equalizer->filter_updated.connect(sigc::mem_fun(*this, &FrequencyResponsePlot::handle_coefficient_update));
 }
@@ -200,7 +200,7 @@ void FrequencyResponsePlot::draw_handles(int w, int h, const CairoCtx& cr) {
 
         cr->set_line_width(1.5);
 
-        if (f == selected_filter) {
+        if (!selected_filter.empty() && f->band == selected_filter) {
             cr->set_source_rgb(c.get_red(), c.get_green(), c.get_blue());
             cr->arc(x, y, HANDLE_RADIUS, 0, 2 * M_PI);
             cr->fill();
@@ -214,7 +214,7 @@ void FrequencyResponsePlot::draw_handles(int w, int h, const CairoCtx& cr) {
         cr->arc(x, y, HANDLE_RADIUS, 0, 2 * M_PI);
         cr->stroke();
 
-        if (f == selected_filter) {
+        if (!selected_filter.empty() && f->band == selected_filter) {
             cr->set_source_rgb(0, 0, 0);
         }
         cr->get_text_extents(bt, te);
@@ -225,7 +225,6 @@ void FrequencyResponsePlot::draw_handles(int w, int h, const CairoCtx& cr) {
 }
 
 bool FrequencyResponsePlot::on_button_press_event(GdkEventButton* ev) {
-    is_dragging = true;
     for (auto entry : locations) {
         auto xy = entry.second;
         auto x = xy.first;
@@ -237,7 +236,8 @@ bool FrequencyResponsePlot::on_button_press_event(GdkEventButton* ev) {
 
         auto hit = diff_x > 0 && diff_y > 0 && diff_x < HANDLE_CIRCUMFERENCE && diff_y < HANDLE_CIRCUMFERENCE;
         if (hit) {
-            selected_filter = entry.first;
+            selected_filter = entry.first->band;
+            is_dragging = true;
             queue_draw();
             break;
         }
@@ -255,32 +255,53 @@ static inline double x_to_freq(double x, double w, uint samplerate, double start
     return pow(10.0, x / m) * start_freq;
 }
 
+static GValue double_value(double val) {
+    GValue v = G_VALUE_INIT;
+    g_value_init(&v, G_TYPE_DOUBLE);
+    g_value_set_double(&v, val);
+    return v;
+}
+
 bool FrequencyResponsePlot::on_motion_notify_event(GdkEventMotion* ev) {
     auto bounds = get_allocation();
     auto x = ev->x;
     auto y = ev->y;
 
-    if (!is_dragging || !selected_filter) {
-        return true;
+    if (!is_dragging || selected_filter.empty()) {
+        return false;
     }
-
-    if (selected_filter->filtertype - 3 < 0) {
+    auto f = filters[selected_filter];
+    if (f->filtertype - 3 < 0) {
         auto gain = DB_SCALE * (((-2 * y) / bounds.get_height()) + 1.0);
         if (abs(gain) <= 24.0) {
-            selected_filter->gain = gain;
+            GValue v = double_value(gain);
+            equalizer->change_filter.emit(f->band, FilterChangeType::GAIN, &v);
         }
     }
 
     auto freq = x_to_freq(x, bounds.get_width(), samplerate, start_freq);
-    selected_filter->freq = freq;
-
-    equalizer->filter_changed.emit(selected_filter);
+    GValue v = double_value(freq);
+    equalizer->change_filter.emit(f->band, FilterChangeType::FREQ, &v);
     return true;
 }
 
 bool FrequencyResponsePlot::on_scroll_event(GdkEventScroll* ev) {
-    if (selected_filter) {
-        g_print("scroll\n");
+    if (selected_filter.empty()) {
+        return false;
+    }
+    auto f = filters[selected_filter];
+    if (f->filtertype - 3 < 0) {
+        auto current_q = f->q;
+        auto direction = ev->direction;
+        if (direction == GdkScrollDirection::GDK_SCROLL_DOWN) {
+            if (current_q - 0.1 > 0) {
+                GValue v = double_value(current_q - 0.1);
+                equalizer->change_filter.emit(f->band, FilterChangeType::Q, &v);
+            }
+        } else if (direction == GdkScrollDirection::GDK_SCROLL_UP) {
+            GValue v = double_value(current_q + 0.1);
+            equalizer->change_filter.emit(f->band, FilterChangeType::Q, &v);
+        }
     }
 
     return true;

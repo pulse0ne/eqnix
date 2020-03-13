@@ -30,7 +30,7 @@ public:
 
     void handle_coefficient_update(std::shared_ptr<FilterInfo> update);
 
-    std::shared_ptr<FilterInfo> selected_filter = nullptr;
+    std::string selected_filter = "";
 
 private:
     std::map<std::string, const double> freq_text = {

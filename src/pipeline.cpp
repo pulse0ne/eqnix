@@ -117,7 +117,8 @@ void Pipeline::set_source_monitor_name(const std::string& name) {
         if (playing) {
             set_null_pipeline();
             g_object_set(source, "device", name.c_str(), nullptr);
-            gst_element_set_state(pipeline, GST_STATE_PLAYING);
+            // gst_element_set_state(pipeline, GST_STATE_PLAYING);
+            update_pipeline_state();
         } else {
             g_object_set(source, "device", name.c_str(), nullptr);
         }
@@ -171,6 +172,7 @@ void Pipeline::update_pipeline_state() {
     gst_element_get_state(pipeline, &state, &pending, state_check_timeout);
     if (state != GST_STATE_PLAYING) {
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
+        playing = true;
     }
 }
 

@@ -6,6 +6,10 @@
 #include <sigc++/sigc++.h>
 #include "filter_info.hpp"
 
+enum FilterChangeType {
+    FREQ, GAIN, Q, TYPE
+};
+
 class Equalizer {
 public:
     Equalizer();
@@ -15,10 +19,10 @@ public:
     std::vector<GstElement*> nodes;
 
     sigc::signal<void, std::shared_ptr<FilterInfo>> filter_updated;
-    sigc::signal<void, std::shared_ptr<FilterInfo>> filter_changed;
+    sigc::signal<void, std::string, FilterChangeType, const GValue*> change_filter;
 
 private:
-    void handle_filter_change(std::shared_ptr<FilterInfo> f);
+    void handle_change_filter(std::string name, FilterChangeType change_type, const GValue* value);
 };
 
 #endif // EQUALIZER_HPP
