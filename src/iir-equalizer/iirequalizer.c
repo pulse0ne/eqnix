@@ -101,6 +101,15 @@ struct _IirEqualizerBandClass {
     GstObjectClass parent_class;
 };
 
+typedef struct {
+    gfloat x1, x2;
+    gfloat y1, y2;
+} SecondOrderHistory;
+
+static const guint history_size = sizeof(SecondOrderHistory);
+static inline gfloat one_step(IirEqualizerBand* filter, SecondOrderHistory* history, gfloat input);
+static void iir_equ_process(IirEqualizer* equ, guint8* data, guint size, guint channels);
+
 static GType iir_equalizer_band_get_type(void);
 
 static void iir_equalizer_band_set_property(GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec) {
@@ -299,6 +308,9 @@ static void iir_equalizer_class_init(IirEqualizerClass* klass) {
 
 static void iir_equalizer_init(IirEqualizer* eq) {
     g_mutex_init(&eq->bands_lock);
+
+    eq->history_size = history_size;
+    eq->process = iir_equ_process;
 }
 
 static void iir_equalizer_finalize(GObject* object) {
@@ -378,8 +390,10 @@ static gdouble calculate_bw(IirEqualizerBand* band, gint rate) {
 
 static void setup_peak_filter(IirEqualizer* equ, IirEqualizerBand* band) {
     gint rate = GST_AUDIO_FILTER_RATE(equ);
-
-    g_return_if_fail(rate);
+    if (rate == 0) {
+        rate = 44100;
+    }
+    // g_return_if_fail(rate);
 
     {
         gdouble gain, omega, bw;
@@ -412,8 +426,10 @@ static void setup_peak_filter(IirEqualizer* equ, IirEqualizerBand* band) {
 
 static void setup_low_shelf_filter(IirEqualizer* equ, IirEqualizerBand* band) {
     gint rate = GST_AUDIO_FILTER_RATE(equ);
-
-    g_return_if_fail(rate);
+    if (rate == 0) {
+        rate = 44100;
+    }
+    // g_return_if_fail(rate);
 
     {
         gdouble gain, omega, bw;
@@ -447,8 +463,10 @@ static void setup_low_shelf_filter(IirEqualizer* equ, IirEqualizerBand* band) {
 
 static void setup_high_shelf_filter(IirEqualizer* equ, IirEqualizerBand* band) {
     gint rate = GST_AUDIO_FILTER_RATE(equ);
-
-    g_return_if_fail(rate);
+    if (rate == 0) {
+        rate = 44100;
+    }
+    // g_return_if_fail(rate);
 
     {
         gdouble gain, omega, bw;
@@ -490,6 +508,9 @@ static void post_coefficient_change_message(IirEqualizer* eq, IirEqualizerBand* 
     g_object_get_property(G_OBJECT(band), "name", &name);
 
     rate = GST_AUDIO_FILTER_RATE(eq);
+    if (rate == 0) {
+        rate = 44100;
+    }
 
     s = gst_structure_new("band-info",
         "band", G_TYPE_STRING, g_value_get_string(&name),
@@ -600,13 +621,9 @@ void iir_equalizer_compute_frequencies(IirEqualizer* equ, guint new_count) {
     }
 
     equ->need_new_coefficients = TRUE;
+    update_coefficients(equ);
     BANDS_UNLOCK(equ);
 }
-
-typedef struct {
-    gfloat x1, x2;
-    gfloat y1, y2;
-} SecondOrderHistory;
 
 static inline gfloat one_step(IirEqualizerBand* filter, SecondOrderHistory* history, gfloat input) {
     gfloat output = filter->b0 * input + filter->b1 * history->x1 + filter->b2 * history->x2 - filter->a1 * history->y1 - filter->a2 * history->y2;
@@ -617,8 +634,6 @@ static inline gfloat one_step(IirEqualizerBand* filter, SecondOrderHistory* hist
 
     return output;
 }
-
-static const guint history_size = sizeof(SecondOrderHistory);
 
 static void iir_equ_process(IirEqualizer* equ, guint8* data, guint size, guint channels) {
     guint frames = size / channels / sizeof(gfloat);
@@ -689,8 +704,8 @@ static gboolean iir_equalizer_setup(GstAudioFilter* audio, const GstAudioInfo* i
     switch (GST_AUDIO_INFO_FORMAT(info)) {
     case GST_AUDIO_FORMAT_F32:
         // TODO: these can be set in init now since we only deal with one format
-        equ->history_size = history_size;
-        equ->process = iir_equ_process;
+        // equ->history_size = history_size;
+        // equ->process = iir_equ_process;
         break;
     default:
         return FALSE;
